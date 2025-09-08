@@ -1,79 +1,190 @@
+/* src/components/AttachedFiles/AttachedFiles.css */
+.attached-items-container {
+  margin: 1.5rem 0;
+}
+
+.attached-section {
+  margin-bottom: 1.5rem;
+}
+
+.attached-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Files List Styles */
 .attached-files-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
-  margin-bottom: 16px;
+  gap: 0.75rem;
 }
 
-.attached-file-card {
+.attached-files-list.is-completed {
+  opacity: 0.7;
+}
+
+.attached-file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background-color: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #333;
-  opacity: 1;
-  pointer-events: auto;
-  transition: opacity 0.2s ease;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.attached-file-item:hover {
+  background: #e9ecef;
 }
 
 .file-icon-wrapper {
-  width: 32px;
-  height: 32px;
-  background: #e0e0e0;
-  border-radius: 4px;
+  font-size: 1.5rem;
+  color: #6c757d;
+  margin-right: 0.75rem;
   display: flex;
   align-items: center;
-  justify-content: center;
+  flex-shrink: 0;
 }
 
-.file-icon-wrapper svg {
-  width: 16px;
-  height: 16px;
-  color: #003366;
+.file-icon-wrapper svg[data-icon="fa-file-pdf"] {
+  color: #e74c3c;
+}
+
+.file-icon-wrapper svg[data-icon="fa-file-word"] {
+  color: #2b579a;
+}
+
+.file-icon-wrapper svg[data-icon="fa-file-image"] {
+  color: #27ae60;
 }
 
 .file-info {
   flex: 1;
   min-width: 0;
+  margin-right: 0.5rem; /* Added spacing for remove button */
 }
 
 .file-name {
   font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .file-type {
-  font-size: 12px;
-  color: #666;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.file-close-button {
-  background: none;
-  border: none;
-  color: #d32f2f;
-  cursor: pointer;
-  font-size: 14px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+/* Links List Styles */
+.attached-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.attached-link-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.file-close-button:hover {
-  background-color: #ffebee;
+.attached-link-item:hover {
+  background: #e9ecef;
 }
 
-.is-completed .attached-file-card {
-  opacity: 0.7;
-  pointer-events: none;
+.attached-link-icon {
+  font-size: 1.25rem;
+  color: #007bff;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.link-info {
+  flex: 1;
+  min-width: 0;
+  margin-right: 0.5rem; /* Added spacing for remove button */
+}
+
+.attached-link-url {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.attached-link-url:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+.link-title {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* Common Remove Button Styles - Updated for right alignment */
+.attached-item-remove-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: auto; /* This pushes the button to the right */
+}
+
+.attached-item-remove-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .attached-file-item,
+  .attached-link-item {
+    padding: 0.5rem;
+  }
+  
+  .file-icon-wrapper {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+  }
+  
+  .attached-link-icon {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+  }
+  
+  .file-name,
+  .attached-link-url {
+    font-size: 0.85rem;
+  }
+  
+  .attached-item-remove-btn {
+    font-size: 1.1rem;
+    padding: 0.2rem;
+  }
 }

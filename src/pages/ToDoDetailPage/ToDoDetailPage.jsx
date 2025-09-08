@@ -23,13 +23,13 @@ const ToDoDetailPage = () => {
 
   // State
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [attachedLinks, setAttachedLinks] = useState([]); // New state for links
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isLate, setIsLate] = useState(false); // New state for late tasks
+  const [isLate, setIsLate] = useState(false);
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [comments, setComments] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
 
   // Refs
   const commentBoxRef = useRef(null);
@@ -179,21 +179,30 @@ const ToDoDetailPage = () => {
     setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
-  // Add this function to handle link changes
-  const handleLinkChange = (url) => {
-    setLinkUrl(url);
+  // Updated: Handle link changes as an array
+  const handleLinksChange = (links) => {
+    setAttachedLinks(links);
+  };
+
+  // New: Handle removing individual links
+  const handleRemoveLink = (index) => {
+    setAttachedLinks(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleComplete = () => {
-    // Validate link if it's provided
-    if (linkUrl && !/^(https?:\/\/)/i.test(linkUrl.trim())) {
-      toast.error("Please enter a valid URL starting with http:// or https://");
+    // Validate all links if any are provided
+    const invalidLinks = attachedLinks.filter(link => 
+      link && !/^(https?:\/\/)/i.test(link.trim())
+    );
+    
+    if (invalidLinks.length > 0) {
+      toast.error("Please enter valid URLs starting with http:// or https://");
       return;
     }
     
-    if (attachedFiles.length === 0 && !linkUrl) {
+    if (attachedFiles.length === 0 && attachedLinks.length === 0) {
       const confirmed = window.confirm(
-        "You haven't attached any files or added a link. Are you sure you want to mark this task as completed?"
+        "You haven't attached any files or added any links. Are you sure you want to mark this task as completed?"
       );
       if (!confirmed) return;
     }
@@ -209,8 +218,11 @@ const ToDoDetailPage = () => {
       toast.success("Task marked as completed!");
     }
     
-    // Here you would typically send the linkUrl along with files to your backend
-    console.log("Submission includes link:", linkUrl);
+    // Log submission details
+    console.log("Submission includes:", {
+      files: attachedFiles.length,
+      links: attachedLinks
+    });
   };
 
   const handleIncomplete = () => {
@@ -411,13 +423,19 @@ const ToDoDetailPage = () => {
           onIncomplete={handleIncomplete}
           isCompleted={isCompleted || isLate}
           isLate={isLate}
-          onLinkChange={handleLinkChange}
-          linkUrl={linkUrl}
+          onLinksChange={handleLinksChange} // Changed from onLinksChange to onLinkChange
+          links={attachedLinks} // Pass links array
         />
 
-        {/* Attached Files */}
-        {attachedFiles.length > 0 && (
-          <AttachedFiles files={attachedFiles} onRemove={handleRemoveFile} isCompleted={isCompleted || isLate} />
+        {/* Attached Files & Links - Updated to use the integrated component */}
+        {(attachedFiles.length > 0 || attachedLinks.length > 0) && (
+          <AttachedFiles 
+            files={attachedFiles} 
+            links={attachedLinks}
+            onRemoveFile={handleRemoveFile}
+            onRemoveLink={handleRemoveLink}
+            isCompleted={isCompleted || isLate} 
+          />
         )}
 
         {/* Add Comment Button */}
@@ -425,7 +443,7 @@ const ToDoDetailPage = () => {
           <RiAccountPinBoxLine className="icon-md" /> Add comment
         </SharedButton>
 
-        {/* Comment Input - REMOVED disabled prop to allow commenting anytime */}
+        {/* Comment Input */}
         {showCommentBox && (
           <div ref={commentBoxRef}>
             <CommentBox onSubmit={handleCommentSubmit} />

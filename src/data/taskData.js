@@ -21,7 +21,7 @@ export const taskData = {
           title: "Comprehensive Monitoring and Evaluation Framework for Effective School Management ",
           description:
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-          task_status: "Completed",
+          task_status: "Ongoing",
           schools_required: [
             {
               school_name: "Biñan City Science & Technology High School",
@@ -39,7 +39,7 @@ export const taskData = {
               account_name: "Juan Ponce Dela Cruz",
               school_name: "Biñan City Science & Technology High School",
               link: "None",
-              status: "Completed",
+              status: "Incomplete",
             },
             {
               school_id: "SCHOOL-0002",
@@ -93,7 +93,7 @@ export const taskData = {
           title: "Conduct and Disseminate Action Research to Improve Teaching and Learning Practices ",
           description:
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-          task_status: "Completed",
+          task_status: "Incomplete",
           schools_required: [
             {
               school_name: "Biñan City Science & Technology High School",
