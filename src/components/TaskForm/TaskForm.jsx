@@ -155,6 +155,7 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
     for: [], // Changed to array for multiple selection
     assignedTo: [], // Changed to array for multiple selection
     dueDate: '', 
+    dueTime: '17:00', // Default to 5:00 PM
     title: '',
     description: '',
     linkUrl: ''
@@ -162,8 +163,10 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
 
   const [isLinkInputVisible, setIsLinkInputVisible] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [attachedLinks, setAttachedLinks] = useState([]);
   const [isLinkValid, setIsLinkValid] = useState(true);
   const [availableUsers, setAvailableUsers] = useState([]);
+  const formContainerRef = useRef(null);
 
   // Prepare school options - REMOVED "All schools" option
   const schoolOptions = schoolAccounts.map(school => ({
@@ -262,14 +265,35 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
     setUploadedFiles(prev => prev.filter(file => file.id !== id));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // ✅ Final validation before submit
-    if (formData.linkUrl && !/^(https?:\/\/)/i.test(formData.linkUrl.trim())) {
+  const addLink = () => {
+    if (!formData.linkUrl.trim()) {
       setIsLinkValid(false);
       return;
     }
+
+    if (!/^(https?:\/\/)/i.test(formData.linkUrl.trim())) {
+      setIsLinkValid(false);
+      return;
+    }
+
+    const newLink = {
+      id: Date.now(),
+      url: formData.linkUrl.trim(),
+      title: formData.linkUrl.trim().replace(/^(https?:\/\/)?(www\.)?/i, ''),
+      displayText: formData.linkUrl.trim().replace(/^(https?:\/\/)?(www\.)?/i, '')
+    };
+
+    setAttachedLinks(prev => [...prev, newLink]);
+    setFormData(prev => ({ ...prev, linkUrl: '' }));
+    setIsLinkValid(true);
+  };
+
+  const removeLink = (index) => {
+    setAttachedLinks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
 
     if (!formData.title.trim()) {
       console.warn("Task title is required.");
@@ -286,11 +310,19 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
       return;
     }
 
-    const selectedDate = new Date(formData.dueDate);
-    const formattedDate = selectedDate.toLocaleDateString('en-US', {
+    // Combine date and time
+    const dueDateTime = new Date(`${formData.dueDate}T${formData.dueTime}`);
+    
+    const formattedDate = dueDateTime.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric'
+    });
+    
+    const formattedTime = dueDateTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
 
     onTaskCreated({
@@ -298,15 +330,19 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
       title: formData.title,
       description: formData.description,
       dueDate: formData.dueDate,
+      dueTime: formData.dueTime,
+      dueDateTime: dueDateTime.toISOString(),
       formattedDate,
+      formattedTime,
       office: formData.for.length > 0 ? formData.for.join(', ') : 'All schools',
       assignedTo: formData.assignedTo.length > 0 ? formData.assignedTo.join(', ') : 'All accounts',
       taskSlug: `task-${Date.now()}`,
-      linkUrl: formData.linkUrl,
+      links: attachedLinks,
       attachments: uploadedFiles.map(f => f.name)
     });
 
     setUploadedFiles([]);
+    setAttachedLinks([]);
     setIsLinkInputVisible(false);
     onClose();
   };
@@ -326,8 +362,12 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
   }));
 
   return (
-    <div className="task-form-overlay">
-      <div className="task-form-container">
+    <div className="task-form-overlay" onClick={onClose}>
+      <div 
+        className="task-form-container" 
+        ref={formContainerRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="task-form-close" onClick={onClose}>×</button>
 
         <form onSubmit={handleSubmit} className="task-form">
@@ -363,6 +403,17 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
                 onChange={handleChange}
                 required
                 className="date-picker-input"
+              />
+            </div>
+            <div className="task-form-group">
+              <label htmlFor="dueTime">Due Time</label>
+              <input
+                type="time"
+                id="dueTime"
+                name="dueTime"
+                value={formData.dueTime}
+                onChange={handleChange}
+                className="time-picker-input"
               />
             </div>
           </div>
@@ -422,43 +473,68 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
                 </div>
               </div>
 
-              {uploadedFiles.length > 0 && (
+              {/* Show attached files and links */}
+              {(uploadedFiles.length > 0 || attachedLinks.length > 0) && (
                 <AttachedFiles
                   files={uploadedFiles}
-                  onRemove={removeFile}
+                  links={attachedLinks}
+                  onRemoveFile={removeFile}
+                  onRemoveLink={removeLink}
                   isCompleted={false}
                 />
               )}
 
-              {/* Link Input */}
+              {/* Link Input - Always visible when adding links */}
               {isLinkInputVisible && (
-                <div className="link-input-outer-container">
-                  <input
-                    type="text"
-                    placeholder="https://example.com"
-                    value={formData.linkUrl}
-                    name="linkUrl"
-                    onChange={handleChange}
-                    className={`link-input ${!isLinkValid ? 'invalid' : ''}`}
-                    aria-invalid={!isLinkValid}
-                  />
+                <div className="link-input-container">
+                  <div className="link-input-group">
+                    <input
+                      type="text"
+                      placeholder="https://example.com"
+                      value={formData.linkUrl}
+                      name="linkUrl"
+                      onChange={handleChange}
+                      className={`link-input ${!isLinkValid ? 'invalid' : ''}`}
+                      aria-invalid={!isLinkValid}
+                    />
+                    <button 
+                      type="button" 
+                      className="add-link-btn"
+                      onClick={addLink}
+                      disabled={!formData.linkUrl.trim() || !isLinkValid}
+                    >
+                      Add Link
+                    </button>
+                    <button 
+                      type="button" 
+                      className="cancel-link-btn"
+                      onClick={() => setIsLinkInputVisible(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  
+                  {/* Error Message */}
+                  {!isLinkValid && formData.linkUrl && (
+                    <p className="error-text link-error-below">
+                      Please enter a valid link starting with <strong>http://</strong> or <strong>https://</strong>
+                    </p>
+                  )}
                 </div>
-              )}
-
-              {/* Error Message */}
-              {isLinkInputVisible && !isLinkValid && formData.linkUrl && (
-                <p className="error-text link-error-below">
-                  Please enter a valid link starting with <strong>http://</strong> or <strong>https://</strong>
-                </p>
               )}
             </div>
           </div>
 
-          <button type="submit" className="assign-btn">Assign</button>
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="assign-btn">Assign Task</button>
+          </div>
         </form>
       </div>
     </div>
-  );
+  );  
 };
 
 export default TaskForm;

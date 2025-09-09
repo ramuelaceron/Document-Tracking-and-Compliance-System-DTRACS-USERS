@@ -153,6 +153,7 @@ const TaskEdit = ({ task, onClose, onSave }) => {
     for: [],
     assignedTo: [],
     dueDate: '', 
+    dueTime: '17:00',
     title: '',
     description: '',
     linkUrl: '',
@@ -161,8 +162,10 @@ const TaskEdit = ({ task, onClose, onSave }) => {
 
   const [isLinkInputVisible, setIsLinkInputVisible] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [attachedLinks, setAttachedLinks] = useState([]);
   const [isLinkValid, setIsLinkValid] = useState(true);
   const [availableUsers, setAvailableUsers] = useState([]);
+  const formContainerRef = useRef(null);
 
   // Initialize form data from the task prop
   useEffect(() => {
@@ -176,13 +179,22 @@ const TaskEdit = ({ task, onClose, onSave }) => {
       // Format due date for date input
       const dueDate = task.deadline ? task.deadline.split('T')[0] : '';
       
+      // Extract due time if available
+      const dueTime = task.deadline && task.deadline.includes('T') 
+        ? task.deadline.split('T')[1].substring(0, 5) 
+        : '17:00';
+      
+      // Extract existing links
+      const existingLinks = task.links || [];
+      
       setFormData({
         for: schools,
         assignedTo: assignedAccounts,
         dueDate: dueDate,
+        dueTime: dueTime,
         title: task.title || '',
         description: task.description || '',
-        linkUrl: task.linkUrl || '',
+        linkUrl: '',
         status: task.task_status || 'Ongoing'
       });
       
@@ -195,6 +207,9 @@ const TaskEdit = ({ task, onClose, onSave }) => {
         }));
         setUploadedFiles(existingFiles);
       }
+      
+      // Set existing links
+      setAttachedLinks(existingLinks);
     }
   }, [task]);
 
@@ -299,6 +314,33 @@ const TaskEdit = ({ task, onClose, onSave }) => {
     setUploadedFiles(prev => prev.filter(file => file.id !== id));
   };
 
+  const addLink = () => {
+    if (!formData.linkUrl.trim()) {
+      setIsLinkValid(false);
+      return;
+    }
+
+    if (!/^(https?:\/\/)/i.test(formData.linkUrl.trim())) {
+      setIsLinkValid(false);
+      return;
+    }
+
+    const newLink = {
+      id: Date.now(),
+      url: formData.linkUrl.trim(),
+      title: formData.linkUrl.trim().replace(/^(https?:\/\/)?(www\.)?/i, ''),
+      displayText: formData.linkUrl.trim().replace(/^(https?:\/\/)?(www\.)?/i, '')
+    };
+
+    setAttachedLinks(prev => [...prev, newLink]);
+    setFormData(prev => ({ ...prev, linkUrl: '' }));
+    setIsLinkValid(true);
+  };
+
+  const removeLink = (index) => {
+    setAttachedLinks(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -323,19 +365,22 @@ const TaskEdit = ({ task, onClose, onSave }) => {
       return;
     }
 
+    // Combine date and time
+    const dueDateTime = new Date(`${formData.dueDate}T${formData.dueTime}`);
+    
     // Prepare the updated task data
     const updatedTask = {
       ...task,
       title: formData.title,
       description: formData.description,
-      deadline: formData.dueDate,
+      deadline: dueDateTime.toISOString(),
       task_status: formData.status,
       schools_required: formData.for.map(school => ({ school_name: school })),
       accounts_required: formData.assignedTo.map(account => ({ 
         account_name: account,
         status: 'Ongoing' // Reset status when task is edited
       })),
-      linkUrl: formData.linkUrl,
+      links: attachedLinks,
       // Add new files to attachments
       attachment: [
         ...(task.attachment || []),
@@ -362,17 +407,21 @@ const TaskEdit = ({ task, onClose, onSave }) => {
   }));
 
   return (
-    <div className="task-edit-modal-overlay">
-      <div className="task-edit-modal-container">
-        <div className="task-edit-modal-header">
+    <div className="task-edit-overlay" onClick={onClose}>
+      <div 
+        className="task-edit-container" 
+        ref={formContainerRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="task-edit-header">
           <h2>Edit Task</h2>
-          <button className="task-edit-modal-close" onClick={onClose}>×</button>
+          <button className="task-edit-close" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="task-edit-form">
           {/* Row 1 */}
-          <div className="task-edit-form-row">
-            <div className="task-edit-form-group">
+          <div className="task-edit-row">
+            <div className="task-edit-group">
               <MultiSelectDropdown
                 label="For"
                 options={schoolOptions}
@@ -381,7 +430,7 @@ const TaskEdit = ({ task, onClose, onSave }) => {
                 placeholder="Select schools"
               />
             </div>
-            <div className="task-edit-form-group">
+            <div className="task-edit-group">
               <MultiSelectDropdown
                 label="Assigned to"
                 options={userOptions}
@@ -392,7 +441,7 @@ const TaskEdit = ({ task, onClose, onSave }) => {
                 isAccountDropdown={true}
               />
             </div>
-            <div className="task-edit-form-group">
+            <div className="task-edit-group">
               <label htmlFor="dueDate">Due Date</label>
               <input
                 type="date"
@@ -404,23 +453,37 @@ const TaskEdit = ({ task, onClose, onSave }) => {
                 className="date-picker-input"
               />
             </div>
-            <div className="task-edit-form-group">
-              <label htmlFor="status">Status</label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleStatusChange}
-              >
-                <option value="Ongoing">Ongoing</option>
-                <option value="Completed">Completed</option>
-                <option value="Incomplete">Incomplete</option>
-              </select>
+            <div className="task-edit-group">
+              <label htmlFor="dueTime">Due Time</label>
+              <input
+                type="time"
+                id="dueTime"
+                name="dueTime"
+                value={formData.dueTime}
+                onChange={handleChange}
+                className="time-picker-input"
+              />
             </div>
           </div>
 
+          {/* Status */}
+          <div className="task-edit-group">
+            <label htmlFor="status">Status</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleStatusChange}
+              className="status-select"
+            >
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+              <option value="Incomplete">Incomplete</option>
+            </select>
+          </div>
+
           {/* Title */}
-          <div className="task-edit-form-group">
+          <div className="task-edit-group">
             <label htmlFor="title">Title*</label>
             <input
               type="text"
@@ -434,7 +497,7 @@ const TaskEdit = ({ task, onClose, onSave }) => {
           </div>
 
           {/* Description with Quill Editor */}
-          <div className="task-edit-form-group">
+          <div className="task-edit-group">
             <label>Description (optional)</label>
             <RichTextEditor
               value={formData.description}
@@ -443,9 +506,9 @@ const TaskEdit = ({ task, onClose, onSave }) => {
           </div>
 
           {/* Attach */}
-          <div className="task-edit-form-group">
+          <div className="task-edit-group">
             <label>Attach</label>
-            <div className="task-edit-form-attach">
+            <div className="task-edit-attach">
               <div className="upload-link-container">
                 <div className="upload-item">
                   <input
@@ -474,40 +537,60 @@ const TaskEdit = ({ task, onClose, onSave }) => {
                 </div>
               </div>
 
-              {uploadedFiles.length > 0 && (
+              {/* Show attached files and links */}
+              {(uploadedFiles.length > 0 || attachedLinks.length > 0) && (
                 <AttachedFiles
                   files={uploadedFiles}
-                  onRemove={removeFile}
+                  links={attachedLinks}
+                  onRemoveFile={removeFile}
+                  onRemoveLink={removeLink}
                   isCompleted={false}
                 />
               )}
 
               {/* Link Input */}
               {isLinkInputVisible && (
-                <div className="link-input-outer-container">
-                  <input
-                    type="text"
-                    placeholder="https://example.com"
-                    value={formData.linkUrl}
-                    name="linkUrl"
-                    onChange={handleChange}
-                    className={`link-input ${!isLinkValid ? 'invalid' : ''}`}
-                    aria-invalid={!isLinkValid}
-                  />
+                <div className="link-input-container">
+                  <div className="link-input-group">
+                    <input
+                      type="text"
+                      placeholder="https://example.com"
+                      value={formData.linkUrl}
+                      name="linkUrl"
+                      onChange={handleChange}
+                      className={`link-input ${!isLinkValid ? 'invalid' : ''}`}
+                      aria-invalid={!isLinkValid}
+                    />
+                    <button 
+                      type="button" 
+                      className="add-link-btn"
+                      onClick={addLink}
+                      disabled={!formData.linkUrl.trim() || !isLinkValid}
+                    >
+                      Add Link
+                    </button>
+                    <button 
+                      type="button" 
+                      className="cancel-link-btn"
+                      onClick={() => setIsLinkInputVisible(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  
+                  {/* Error Message */}
+                  {!isLinkValid && formData.linkUrl && (
+                    <p className="error-text link-error-below">
+                      Please enter a valid link starting with <strong>http://</strong> or <strong>https://</strong>
+                    </p>
+                  )}
                 </div>
-              )}
-
-              {/* Error Message */}
-              {isLinkInputVisible && !isLinkValid && formData.linkUrl && (
-                <p className="error-text link-error-below">
-                  Please enter a valid link starting with <strong>http://</strong> or <strong>https://</strong>
-                </p>
               )}
             </div>
           </div>
 
-          <div className="task-edit-form-actions">
-            <button type="button" onClick={onClose} className="cancel-btn">
+          <div className="task-edit-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="save-btn">Save Changes</button>
