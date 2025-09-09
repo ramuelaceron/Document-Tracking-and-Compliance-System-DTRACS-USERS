@@ -1,70 +1,166 @@
-# Getting Started with Create React App
+# DTRACS - DepEd Biñan Record Monitoring System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive web-based task management and record monitoring system designed for the Department of Education (DepEd) Biñan City Schools Division. This application facilitates efficient coordination between schools and the central office for task assignment, tracking, and completion.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+### For Schools
+- Dashboard Overview: Comprehensive view of assigned tasks and progress
+- Task Management: View, update, and complete assigned tasks
+- SGOD Integration: Access to Schools Division Office directives and tasks
+- Section-based Organization: Tasks organized by educational sections
+- Real-time Updates: Live status tracking of task completion
+
+### For Office Users
+- Central Task Management: Create, assign, and monitor tasks across all schools
+- School Oversight: View and manage all school accounts and activities
+- Task Analytics: Track task completion rates, overdue items, and performance metrics
+- Attachment Management: Handle file attachments and documentation
+- Role-based Access: Secure access control for different user levels
+
+## 🛠️ Technology Stack
+
+- Frontend Framework: React 19.1.1
+- Routing: React Router DOM 7.8.0
+- Styling: CSS Modules with custom styling
+- Animations: Framer Motion 12.23.12
+- Rich Text Editor: Quill 2.0.3 with React-QuillJS
+- Icons: React Icons 5.5.0
+- Notifications: React Toastify 11.0.5
+- Particle Effects: React TS Particles 2.12.2
+- Build Tool: Create React App with React Scripts 5.0.1
+
+## 📋 Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn package manager
+
+## 🔧 Installation
+
+1. Clone the repository
+   ```bash
+   git clone <repository-url>
+   cd dtracs-frontend
+   ```
+
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+
+3. Start the development server
+   ```bash
+   npm start
+   ```
+
+4. Open your browser
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## 📖 Usage
+
+### Getting Started
+1. Visit the application homepage
+2. Choose your login type (School or Office)
+3. Enter your credentials
+4. Access your personalized dashboard
+
+### For Schools
+- View assigned tasks in your dashboard
+- Navigate to SGOD section for division-wide tasks
+- Update task status and add comments
+- Upload required attachments
+
+### For Office Personnel
+- Create new tasks and assign to schools
+- Monitor task completion across all schools
+- Review school performance metrics
+- Manage user accounts and permissions
+
+## 🏗️ Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── AttachedFiles/   # File attachment components
+│   ├── TaskActions/     # Task action buttons
+│   ├── Sidebar/         # Navigation sidebars
+│   ├── Header/          # Application header
+│   └── ...
+├── pages/              # Main application pages
+│   ├── Login/          # Authentication pages
+│   ├── Dashboard/      # Dashboard components
+│   ├── Task/           # Task management pages
+│   ├── Todo/           # To-do list pages
+│   └── ...
+├── assets/             # Static assets
+│   ├── images/         # Image files
+│   └── schoolsImages/  # School-specific images
+├── context/            # React context providers
+├── hooks/              # Custom React hooks
+├── utils/              # Utility functions
+└── data/               # Static data files
+```
+
+## 🚀 Available Scripts
 
 ### `npm start`
-
-Runs the app in the development mode.\
+Runs the app in development mode.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
 ### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the test runner in interactive watch mode.
 
 ### `npm run build`
-
 Builds the app for production to the `build` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
 ### `npm run eject`
+**Note: This is a one-way operation!**
+Removes the single build dependency and copies all configuration files into your project.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🎨 Key Components
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- TaskActions: Handles task status updates and actions
+- AttachedFiles: Manages file uploads and downloads
+- RichTextEditor: Provides rich text editing capabilities
+- Sidebar: Navigation component with role-based menus
+- ProfileAvatar: User profile display component
+- CommentBox: Task commenting system
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🔐 Security Features
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- Role-based access control
+- Secure authentication system
+- Input sanitization with DOMPurify
+- Protected routes for authorized users only
 
-## Learn More
+## 📱 Responsive Design
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The application is fully responsive and optimized for:
+- Desktop computers
+- Tablets
+- Mobile devices
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 🤝 Contributing
 
-### Code Splitting
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 📄 License
 
-### Analyzing the Bundle Size
+This project is proprietary software developed for DepEd Biñan City Schools Division.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🆘 Support
 
-### Making a Progressive Web App
+For technical support or questions, please contact the DepEd Biñan City ICT Department.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 📊 Version
 
-### Advanced Configuration
+Current Version: 0.1.0
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Department of Education - Biñan City Schools Division**
