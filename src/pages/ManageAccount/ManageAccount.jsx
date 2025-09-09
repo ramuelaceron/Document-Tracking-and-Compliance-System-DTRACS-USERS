@@ -11,169 +11,160 @@ import EditLinks from '../../components/EditLinks/EditLinks';
 import ProfileInfoCard from '../../components/ProfileInfoCard/ProfileInfoCard';
 import ProfileAvatar from '../../components/ProfileAvatar/ProfileAvatar';
 
-// 🔽 Import both account templates (for fallback structure)
-import { schoolAccountData, focalAccountData } from '../../data/accountData';
-
 const ManageAccount = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [showNameForm, setShowNameForm] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [showContactForm, setShowContactForm] = useState(false);
-
-  // ✅ State: user data from session or fallback
   const [userData, setUserData] = useState(null);
   const [avatar, setAvatar] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const fileInputRef = useRef(null);
 
-  // ✅ Temp states
-  const [tempName, setTempName] = useState(null);
-  const [tempEmail, setTempEmail] = useState(null);
-  const [tempContact, setTempContact] = useState(null);
+  // ✅ Unified temp state for all editable fields
+  const [tempProfile, setTempProfile] = useState({
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+    email: "",
+    contact_number: "",
+  });
 
-  // ✅ Load user on mount
+  // ✅ Load user data from sessionStorage on mount
   useEffect(() => {
-    const savedUser = sessionStorage.getItem("currentUser");
-    if (!savedUser) {
-      toast.error("Not logged in. Redirecting...");
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
-      return;
-    }
+    const loadUserData = () => {
+      try {
+        const savedUser = sessionStorage.getItem("currentUser");
+        if (!savedUser) {
+          toast.error("Not logged in. Redirecting...");
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1500);
+          return;
+        }
 
-    const user = JSON.parse(savedUser);
+        const currentUser = JSON.parse(savedUser);
+        
+        // Set default user data structure
+        const userData = {
+          user_id: currentUser.user_id || "123",
+          first_name: currentUser.first_name || "John",
+          last_name: currentUser.last_name || "Doe",
+          middle_name: currentUser.middle_name || "",
+          email: currentUser.email || "john.doe@example.com",
+          contact_number: currentUser.contact_number || "+1234567890",
+          avatar: currentUser.avatar || null,
+          role: currentUser.role || "school",
+          school_name: currentUser.school_name || "Sample School",
+          school_address: currentUser.school_address || "123 Main St, City",
+          position: currentUser.position || "Teacher",
+          office: currentUser.office || "Education",
+          section_designation: currentUser.section_designation || "Elementary"
+        };
 
-    // 🔍 Determine which template to use
-    const accountData =
-      user.role === "school" ? { ...schoolAccountData } : { ...focalAccountData };
+        setUserData(userData);
+        setAvatar(userData.avatar);
 
-    // Merge session data with template
-    const mergedData = {
-      ...accountData,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      middle_name: user.middle_name || "",
-      email: user.email,
-      contact_number: user.contact_number || accountData.contact_number,
-      avatar: user.avatar,
+        // Initialize tempProfile with current data
+        setTempProfile({
+          first_name: userData.first_name,
+          middle_name: userData.middle_name,
+          last_name: userData.last_name,
+          email: userData.email,
+          contact_number: userData.contact_number,
+        });
+
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        toast.error("Failed to load user data. Please login again.");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      }
     };
 
-    setUserData(mergedData);
-    setAvatar(user.avatar || accountData.avatar);
+    loadUserData();
   }, []);
 
   if (!userData) {
-    return <div className="manage-account-app">Loading...</div>;
+    return <div className="manage-account-app">Loading user data...</div>;
   }
 
-  // Open forms
-  const openNameForm = () => {
-    setTempName({ ...userData });
-    setShowNameForm(true);
-  };
-
-  const openEmailForm = () => {
-    setTempEmail(userData.email);
-    setShowEmailForm(true);
-  };
-
-  const openContactForm = () => {
-    setTempContact(userData.contact_number);
-    setShowContactForm(true);
-  };
-
-  // Check changes
-  const hasNameChanges = () => {
-    if (!tempName) return false;
+  // Check if any field has changed
+  const hasChanges = () => {
     return (
-      tempName.first_name.trim() !== userData.first_name.trim() ||
-      tempName.middle_name.trim() !== userData.middle_name.trim() ||
-      tempName.last_name.trim() !== userData.last_name.trim()
+      tempProfile.first_name.trim() !== userData.first_name.trim() ||
+      tempProfile.middle_name.trim() !== userData.middle_name.trim() ||
+      tempProfile.last_name.trim() !== userData.last_name.trim() ||
+      tempProfile.email.trim() !== userData.email.trim() ||
+      tempProfile.contact_number.trim() !== userData.contact_number.trim()
     );
   };
 
-  const hasEmailChanges = () => {
-    if (!tempEmail) return false;
-    return tempEmail.trim() !== userData.email.trim();
-  };
-
-  const hasContactChanges = () => {
-    if (!tempContact) return false;
-    return tempContact.trim() !== userData.contact_number.trim();
-  };
-
   // Confirm discard
-  const confirmDiscard = (hasChanges, onClose) => {
-    if (!hasChanges) {
-      onClose();
+  const confirmDiscard = () => {
+    if (!hasChanges()) {
+      setIsEditing(false);
     } else {
       const confirmed = window.confirm("You have unsaved changes. Are you sure you want to discard them?");
       if (confirmed) {
+        // Reset tempProfile to original values
+        setTempProfile({
+          first_name: userData.first_name,
+          middle_name: userData.middle_name,
+          last_name: userData.last_name,
+          email: userData.email,
+          contact_number: userData.contact_number,
+        });
         toast.info("Changes discarded.", { autoClose: 1500 });
-        onClose();
+        setIsEditing(false);
       } else {
         toast.info("Edit cancelled. Your changes are safe.", { autoClose: 1500 });
       }
     }
   };
 
-  // Save handlers
-  const handleSaveName = () => {
-    if (tempName.first_name.trim() && tempName.last_name.trim()) {
-      const updated = {
-        ...userData,
-        first_name: tempName.first_name.trim(),
-        middle_name: tempName.middle_name?.trim() || '',
-        last_name: tempName.last_name.trim(),
-      };
-      setUserData(updated);
-      // Update session
-      const savedUser = JSON.parse(sessionStorage.getItem("currentUser"));
-      sessionStorage.setItem(
-        "currentUser",
-        JSON.stringify({ ...savedUser, ...tempName })
-      );
-      toast.success("Name updated successfully!");
-      setShowNameForm(false);
-      setTempName(null);
-    } else {
-      toast.warn("Please fill in required fields.");
+  // Unified save handler — frontend only
+  const handleSaveProfile = () => {
+    // Validate required fields
+    if (!tempProfile.first_name.trim() || !tempProfile.last_name.trim()) {
+      toast.warn("First and last name are required.");
+      return;
     }
-  };
 
-  const handleSaveEmail = () => {
-    if (tempEmail.includes("@")) {
-      const updated = { ...userData, email: tempEmail.trim() };
-      setUserData(updated);
-      // Update session
-      const savedUser = JSON.parse(sessionStorage.getItem("currentUser"));
-      sessionStorage.setItem(
-        "currentUser",
-        JSON.stringify({ ...savedUser, email: tempEmail.trim() })
-      );
-      toast.success("Email updated successfully!");
-      setShowEmailForm(false);
-      setTempEmail(null);
-    } else {
+    if (!tempProfile.email || !tempProfile.email.includes("@")) {
       toast.warn("Please enter a valid email.");
+      return;
     }
-  };
 
-  const handleSaveContact = () => {
-    if (tempContact.trim()) {
-      const updated = { ...userData, contact_number: tempContact.trim() };
-      setUserData(updated);
-      // No need to update session for contact only (unless used elsewhere)
-      toast.success("Contact number updated successfully!");
-      setShowContactForm(false);
-      setTempContact(null);
-    } else {
+    if (!tempProfile.contact_number?.trim()) {
       toast.warn("Please enter a contact number.");
+      return;
+    }
+
+    try {
+      // ✅ Update local state only (frontend simulation)
+      const updatedData = { 
+        ...userData, 
+        first_name: tempProfile.first_name.trim(),
+        middle_name: tempProfile.middle_name?.trim() || '',
+        last_name: tempProfile.last_name.trim(),
+        email: tempProfile.email.trim(),
+        contact_number: tempProfile.contact_number.trim(),
+      };
+      
+      setUserData(updatedData);
+
+      // ✅ Update session storage (simulated persistence)
+      sessionStorage.setItem("currentUser", JSON.stringify(updatedData));
+
+      toast.success("✅ Profile updated successfully! (Frontend simulation)");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("❌ Failed to update profile. Please try again.");
     }
   };
 
-  // Handle image upload
+  // Handle image upload (frontend only)
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -190,18 +181,26 @@ const ManageAccount = () => {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAvatar(reader.result);
-        // Update session
-        const savedUser = JSON.parse(sessionStorage.getItem("currentUser"));
-        sessionStorage.setItem(
-          "currentUser",
-          JSON.stringify({ ...savedUser, avatar: reader.result })
-        );
-        toast.info("Profile picture updated!", { autoClose: 1500 });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64Image = reader.result;
+          setAvatar(base64Image);
+          
+          // Update session storage
+          const savedUser = JSON.parse(sessionStorage.getItem("currentUser") || '{}');
+          const updatedUser = { ...savedUser, avatar: base64Image };
+          sessionStorage.setItem("currentUser", JSON.stringify(updatedUser));
+          
+          setUserData(prev => ({ ...prev, avatar: base64Image }));
+          
+          toast.info("Profile picture updated!", { autoClose: 1500 });
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error processing image:", error);
+        toast.error("Failed to process image. Please try again.");
+      }
     }
   };
 
@@ -212,8 +211,7 @@ const ManageAccount = () => {
   // Toggle edit mode
   const toggleEditMode = () => {
     if (isEditing) {
-      setIsEditing(false);
-      toast.info("Exited edit mode.", { autoClose: 1500 });
+      confirmDiscard();
     } else {
       setIsEditing(true);
       toast.info("Edit mode enabled. Make your changes!", { autoClose: 2000 });
@@ -241,32 +239,14 @@ const ManageAccount = () => {
           />
         </div>
 
-        {/* Edit Links */}
+        {/* Edit Links — shows when in edit mode */}
         {isEditing && (
           <EditLinks
-            showNameForm={showNameForm}
-            showEmailForm={showEmailForm}
-            showContactForm={showContactForm}
-            tempName={tempName}
-            tempEmail={tempEmail}
-            tempContact={tempContact}
-            userData={userData}
-            setTempName={setTempName}
-            setTempEmail={setTempEmail}
-            setTempContact={setTempContact}
-            openNameForm={openNameForm}
-            openEmailForm={openEmailForm}
-            openContactForm={openContactForm}
+            tempProfile={tempProfile}
+            setTempProfile={setTempProfile}
+            handleSaveProfile={handleSaveProfile}
             confirmDiscard={confirmDiscard}
-            handleSaveName={handleSaveName}
-            handleSaveEmail={handleSaveEmail}
-            handleSaveContact={handleSaveContact}
-            hasNameChanges={hasNameChanges}
-            hasEmailChanges={hasEmailChanges}
-            hasContactChanges={hasContactChanges}
-            setShowNameForm={setShowNameForm}
-            setShowEmailForm={setShowEmailForm}
-            setShowContactForm={setShowContactForm}
+            hasChanges={hasChanges}
           />
         )}
       </main>

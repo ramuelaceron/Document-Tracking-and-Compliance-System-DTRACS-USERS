@@ -1,83 +1,37 @@
 /* src/components/EditLinks/EditLinks.css */
-
 .edit-links {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 15px;
 }
 
 .edit-link {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Required for animation */
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .edit-link-button {
+  width: 100%;
+  padding: 12px 20px;
   background: none;
   border: none;
-  color: #000;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 0 12px 20px;
-  border-bottom: 1px solid #eee;
-  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
   text-align: left;
-  transition: background-color 0.2s ease;
-  border-radius: 4px;
+  cursor: pointer;
+  color: #374151;
 }
 
-.edit-link-button:hover {
-  background-color: #f0f0f0;
-}
-
-/* Arrow - Subtle Click Effect + Official padding-right */
-.arrow {
-  color: #000;
-  font-weight: bold;
-  font-size: 14px;
-  display: inline-block;
-  transition: transform 0.1s ease;
-  padding-right: 25px; /* ✅ Official - do not remove */
-}
-
-.edit-link-button:active .arrow {
-  transform: scale(0.85);
-}
-
-.edit-link-button:hover .arrow {
-  color: #2196F3;
-  transform: scale(1.05);
-}
-
-/* Edit Form - Smooth Slide Down */
 .edit-form {
-  margin-top: 12px;
   padding: 16px;
-  background-color: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
-}
-
-/* Show: Expand height and fade in */
-.edit-link.show-form .edit-form {
-  max-height: 200px;
-  opacity: 1;
+  border-top: 1px solid #f3f4f6;
 }
 
 .form-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 20px;
 }
 
 .form-group {
@@ -86,38 +40,83 @@
 
 .form-group label {
   display: block;
-  color: #999;
-  font-size: 12px;
-  margin-bottom: 4px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-group input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 14px;
-  box-sizing: border-box;
+  transition: all 0.2s ease;
+  background: #f9fafb;
 }
 
-/* Save Button - Added spacing above */
-.save-btn {
-  background-color: #2196F3;
+.form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.acc-save-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 12px 24px;
+  border-radius: 6px;
   font-size: 14px;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  margin-top: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.save-btn:hover {
-  background-color: #1976d2;
-  transform: scale(1.02);
+.acc-save-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
-.save-btn:active {
-  transform: scale(1);
+/* Responsive */
+@media (max-width: 768px) {
+  .edit-links {
+    gap: 16px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .edit-link-button {
+    padding: 16px;
+    font-size: 15px;
+  }
+  
+  .edit-form {
+    padding: 16px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    margin-top: 20px;
+  }
+  
+  .save-btn {
+    width: 100%;
+    padding: 12px 20px;
+  }
 }
