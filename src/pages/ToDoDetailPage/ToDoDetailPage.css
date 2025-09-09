@@ -55,7 +55,7 @@
 .todo-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 25px;
   margin-bottom: 10px;
 }
 

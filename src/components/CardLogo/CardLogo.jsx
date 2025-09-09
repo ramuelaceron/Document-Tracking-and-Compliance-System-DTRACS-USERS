@@ -24,7 +24,7 @@ const CardLogo = () => {
     >
         <div className={`card-text ${hovered ? "hovered" : ""}`}>
           <h1 className="title">
-            School Governance and <br /> Operations Division
+            School Governance and Operations Division
           </h1>
         </div>
       </div>
@@ -35,11 +35,11 @@ const CardLogo = () => {
         style={{ backgroundImage: `url(${hoveredCID ? CIDWhiteLogo : CIDBlueLogo})` }}
         onMouseEnter={() => setHoveredCID(true)}
         onMouseLeave={() => setHoveredCID(false)}
-        onClick={() => navigate("")}   // navigate to CID page on click
+        onClick={() => navigate("/no-service")}   // navigate to CID page on click
       >
         <div className={`card-text ${hoveredCID ? "hovered" : ""}`}>
           <h1 className="title">
-            Curriculum Implementation <br /> Division
+            Curriculum Implementation Division
           </h1>
         </div>
       </div>
@@ -50,11 +50,11 @@ const CardLogo = () => {
         style={{ backgroundImage: `url(${hoveredOSDS ? SGODWhiteLogo : SGODBlueLogo})` }}
         onMouseEnter={() => setHoveredOSDS(true)}
         onMouseLeave={() => setHoveredOSDS(false)}
-        onClick={() => navigate("")}   // navigate to CID page on click
+        onClick={() => navigate("/no-service")}   // navigate to CID page on click
       >
         <div className={`card-text ${hoveredOSDS ? "hovered" : ""}`}>
           <h1 className="title">
-            Office of the Schools <br /> Division Superintendent
+            Office of the Schools Division Superintendent
           </h1>
         </div>
       </div>

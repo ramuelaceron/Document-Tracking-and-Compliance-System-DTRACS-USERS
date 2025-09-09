@@ -192,7 +192,7 @@ const ToDoDetailPage = () => {
   const handleComplete = () => {
     // Validate all links if any are provided
     const invalidLinks = attachedLinks.filter(link => 
-      link && !/^(https?:\/\/)/i.test(link.trim())
+      link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
     );
     
     if (invalidLinks.length > 0) {

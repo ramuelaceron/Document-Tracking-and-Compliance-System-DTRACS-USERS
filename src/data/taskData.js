@@ -18,7 +18,7 @@ export const taskData = {
           creation_date: "2025-08-22T16:12:10.573513",
           deadline: "2025-09-30T10:59:59",
           completion_date: "",
-          title: "Comprehensive Monitoring and Evaluation Framework for Effective School Management ",
+          title: "Comprehensive Monitoring and Evaluation Framework for Effective School Management",
           description:
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
           task_status: "Ongoing",

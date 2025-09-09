@@ -1,7 +1,6 @@
 // src/components/TaskActions/TaskActions.jsx
 import React, { useState, useRef } from "react";
 import "./TaskActions.css";
-
 // Icons
 import { FaPaperclip } from "react-icons/fa";
 import { MdOutlineDoneOutline, MdCancel } from "react-icons/md";
@@ -81,7 +80,7 @@ const TaskActions = ({
                 className="attach-dropdown-item"
                 onClick={handleFileClick}
               >
-                <FaPaperclip className="dropdown-icon" />
+                <FaPaperclip className="attach-dropdown-icon" />
                 Upload file
               </button>
               <button
@@ -89,7 +88,7 @@ const TaskActions = ({
                 className="attach-dropdown-item"
                 onClick={handleLinkClick}
               >
-                <IoMdLink className="dropdown-icon" />
+                <IoMdLink className="attach-dropdown-icon" />
                 Add link
               </button>
             </div>

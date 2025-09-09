@@ -16,6 +16,9 @@ import SectionPage from "./pages/Sections/SectionPage";
 import ManageAccount from "./pages/ManageAccount/ManageAccount";
 import AccountDisplay from "./pages/Schools/AccountDisplay/AccountDisplay"
 
+//CID and OSDS placeholder page
+import NoService from "./pages/OSDS_CID/NoService";
+
 // School ToDo Dashboard
 import ToDoPage from "./pages/Todo/ToDoPage/ToDoPage";
 import RoleBasedRedirect from "./components/RoleBasedRedirect/RoleBasedRedirect";
@@ -54,6 +57,9 @@ function App() {
           <Route path="task-list/:taskSlug" element={<ToDoDetailPage />} />
         </Route>
         
+        {/* CID and OSDS Routes */}
+        <Route path="/no-service" element={<NoService />} />
+
         <Route path="/to-do" element={<ToDoPage />} >
           <Route path="upcoming" element={<ToDoUpcoming />} />
           <Route path="past-due" element={<ToDoPastDue />} />

@@ -75,9 +75,6 @@ const AttachedFiles = ({ files, links = [], onRemoveFile, onRemoveLink, isComple
                   >
                     {link.displayText || link.title || link.url}
                   </a>
-                  {link.title && link.title !== link.url && (
-                    <div className="link-title">{link.title}</div>
-                  )}
                 </div>
                 {!isCompleted && (
                   <button

@@ -74,8 +74,9 @@
 
 /* FIXED: Proper left alignment for dropdown items */
 .attach-dropdown-item {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
   width: 100%;
   padding: 10px 14px;
   background: none;
@@ -92,7 +93,7 @@
   background-color: #f6f6f6;
 }
 
-.dropdown-icon {
+.attach-dropdown-icon {
   width: 14px;
   height: 14px;
   opacity: 0.8;

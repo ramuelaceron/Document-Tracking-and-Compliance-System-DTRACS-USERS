@@ -1,0 +1,25 @@
+.no-service-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.no-service-content {
+  text-align: center;
+}
+
+.no-service-message {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin: 0 0 1rem 0;
+}
+
+.no-service-submessage {
+  font-size: 1rem;
+  color: #adb5bd;
+  margin: 0;
+  font-style: italic;
+}
