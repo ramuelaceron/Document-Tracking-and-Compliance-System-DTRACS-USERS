@@ -11,6 +11,6 @@
 }
 
 /* When sidebar is expanded */
-.sidebar.expanded ~ .app-content {
+.side-bar.side-expanded ~ .app-content {
   margin-left: 200px;
 }
