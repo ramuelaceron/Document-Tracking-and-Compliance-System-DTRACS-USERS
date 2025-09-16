@@ -125,13 +125,13 @@ const ToDoPastDue = () => {
                           deadline: task.deadline,
                           creation_date: task.creation_date,
                           taskDescription: task.description,
-                          taskId: task.id,
+                          taskId: task.task_id,
                           creator_name: task.creator_name,
                           section_designation: task.section_designation,
                           full_name: task.creator_name
                         }}
                         className="pastdue-task-link"
-                        key={task.id}
+                        key={`${task.task_id}-${task.title}`}
                       >
                         <div className="pastdue-card">
                           <div className="pastdue-card-content">

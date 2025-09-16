@@ -25,6 +25,9 @@
   display: inline-block;
   border-bottom: none;
   transition: color 0.3s ease;
+  background: none;
+  border: none;
+  font-family: inherit;
 }
 
 /* Pseudo-element for smooth underline */
@@ -42,12 +45,13 @@
 
 /* Active tab: grow the underline to full width */
 .todo-tab.active::after {
-  width: 100%;
+  width: 100% !important;
 }
 
 /* Optional: Keep text bold in active state */
 .todo-tab.active {
   color: #003366;
+  font-weight: 600;
 }
 
 .todo-indicator {

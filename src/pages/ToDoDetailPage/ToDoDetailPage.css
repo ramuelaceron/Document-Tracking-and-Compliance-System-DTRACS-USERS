@@ -23,6 +23,7 @@
 
 /* Back Button */
 .todo-back-btn {
+  position: relative; /* 👈 ADD THIS */
   background: none;
   border: none;
   color: #000;
@@ -93,6 +94,73 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Greyed out complete button */
+.complete-btn:disabled {
+  background-color: #cccccc !important;
+  color: #666666 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+/* Highlighted back button when task is completed */
+.highlighted-back-btn {
+  position: relative;
+  z-index: 1001; /* Above the overlay */
+  border-radius: 6px;
+  padding: 6px 12px;
+  transform: translateY(-1px);
+}
+
+/* Revision section styling */
+.revision-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 2px dashed #e9ecef;
+}
+
+.revision-title {
+  color: #6c757d;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+/* Button container for side-by-side buttons */
+.task-actions-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Individual action buttons */
+.action-btn {
+  padding: 12px 24px; 
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.complete-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.complete-btn:hover:not(:disabled) {
+  background-color: #3e8e41;
+}
+
+.cancel-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+}
+
+.cancel-btn:hover {
+  background-color: #d32f2f;
 }
 
 /* Meta Info */
@@ -195,4 +263,19 @@
   .task-title {
     font-size: 20px;
   }
+}
+
+.todo-description {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #333;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }

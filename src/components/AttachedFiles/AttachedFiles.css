@@ -66,7 +66,7 @@
 .file-info {
   flex: 1;
   min-width: 0;
-  margin-right: 0.5rem; /* Added spacing for remove button */
+  margin-right: 0.5rem;
 }
 
 .file-name {
@@ -117,7 +117,7 @@
 .link-info {
   flex: 1;
   min-width: 0;
-  margin-right: 0.5rem; /* Added spacing for remove button */
+  margin-right: 0.5rem;
 }
 
 .attached-link-url {
@@ -135,7 +135,7 @@
   color: #0056b3;
 }
 
-/* Common Remove Button Styles - Updated for right alignment */
+/* Common Remove Button Styles */
 .attached-item-remove-btn {
   background: none;
   border: none;
@@ -146,7 +146,7 @@
   border-radius: 4px;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  margin-left: auto; /* This pushes the button to the right */
+  margin-left: auto;
 }
 
 .attached-item-remove-btn:hover {

@@ -1,54 +1,84 @@
-import React from 'react';
+// src/pages/ToDoListPage/ToDoListPage.jsx
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { taskData } from '../../data/taskData';
 import { createSlug } from '../../utils/idGenerator';
-import { generateAvatar } from '../../utils/iconGenerator'; // Import the utility
+import { generateAvatar } from '../../utils/iconGenerator';
 import './ToDoListPage.css';
+import config from '../../config';
 
 const ToDoListPage = () => {
   const { sectionId } = useParams();
-  const { state } = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // Fallback values
-  const { section_designation, full_name } = state || {};
+  const { state } = location;
+  const { section_designation, full_name, user_id } = state || {};
   const pageTitle = section_designation || 'Task List';
-  const person = full_name || 'Unknown Focal';
+  const person = full_name || 'Unknown Focal]]';
 
-  // 🔍 Find the section and the correct focal entry
-  const section = taskData[sectionId]; 
-  let tasks = [];
-  let avatar = null;
+  const currentUser = JSON.parse(sessionStorage.getItem("currentUser"));
+  const schoolUserId = user_id || currentUser?.user_id;
 
-  if (section && Array.isArray(section)) {
-    const focalEntry = section.find(
-      (item) => item.section_designation === section_designation && item.full_name === full_name
-    );
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    if (focalEntry) {
-      tasks = focalEntry.tasklist || [];
-      avatar = focalEntry.avatar;
-    }
-  }
-
-  // Generate avatar data using the utility
   const { initials, color } = generateAvatar(full_name);
 
-  // Function to extract time from ISO date string
   const extractTimeFromDate = (dateString) => {
     if (!dateString) return 'No deadline';
-    
     try {
       const date = new Date(dateString);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
-      console.error('Error parsing date:', error);
       return 'Invalid date';
     }
   };
 
+  useEffect(() => {
+    const fetchTasksBySection = async () => {
+      if (!schoolUserId || !section_designation) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const token = currentUser?.token;
+
+        const response = await fetch(
+          `${config.API_BASE_URL}/school/all/tasks?user_id=${encodeURIComponent(schoolUserId)}`,
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch tasks: ${response.status} - ${errorText}`);
+        }
+
+        const allAssignedTasks = await response.json();
+        const filteredTasks = allAssignedTasks.filter(
+          (task) => task.section === section_designation
+        );
+
+        setTasks(filteredTasks);
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+        setError(err.message || "Failed to load tasks. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasksBySection();
+  }, [schoolUserId, section_designation, currentUser?.token]);
+
   const handleViewTask = (task) => {
-    // Use the section_designation from state instead of task.section_designation
     const slug = createSlug(section_designation);
     navigate(`${slug}`, {
       state: {
@@ -57,23 +87,19 @@ const ToDoListPage = () => {
         deadline: task.deadline,
         creation_date: task.creation_date,
         taskDescription: task.description,
-        taskId: task.task_id, // Include the task ID
+        taskId: task.task_id,
       },
     });
   };
 
   return (
     <div className="task-list-page">
-      {/* ✅ Header with real avatar or generated one */}
       <div className="header">
         <div className="avatar">
-          {avatar ? (
-            <img src={avatar} alt={`${person}'s avatar`} />
+          {currentUser?.avatar ? (
+            <img src={currentUser.avatar} alt={`${person}'s avatar`} />
           ) : (
-            <div 
-              className="avatar-fallback" 
-              style={{ backgroundColor: color }}
-            >
+            <div className="avatar-fallback" style={{ backgroundColor: color }}>
               {initials}
             </div>
           )}
@@ -84,10 +110,17 @@ const ToDoListPage = () => {
         </div>
       </div>
 
-      {/* Task List or Empty State */}
-      {tasks.length === 0 ? (
+      {loading ? (
         <div className="no-tasks-container">
-          <p className="no-tasks">No tasks assigned for this focal area.</p>
+          <p className="no-tasks">Loading tasks...</p>
+        </div>
+      ) : error ? (
+        <div className="no-tasks-container">
+          <p className="no-tasks" style={{ color: 'red' }}>{error}</p>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="no-tasks-container">
+          <p className="no-tasks">No tasks assigned for this section.</p>
         </div>
       ) : (
         <div className="task-list">

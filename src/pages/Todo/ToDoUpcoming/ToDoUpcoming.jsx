@@ -1,3 +1,4 @@
+// src/pages/Todo/Upcoming/ToDoUpcoming.jsx
 import React, { useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { PiClipboardTextBold } from "react-icons/pi";
@@ -125,13 +126,13 @@ const ToDoUpcoming = () => {
                           deadline: task.deadline,
                           creation_date: task.creation_date,
                           taskDescription: task.description,
-                          taskId: task.id,
+                          taskId: task.task_id,
                           creator_name: task.creator_name,
                           section_designation: task.section_designation,
                           full_name: task.creator_name
                         }}
                         className="upcoming-task-link"
-                        key={task.id}
+                        key={`${task.task_id}-${task.title}`}
                       >
                         <div className="upcoming-card">
                           <div className="upcoming-card-content">
@@ -147,9 +148,6 @@ const ToDoUpcoming = () => {
                                   <span className="upcoming-office">
                                     {task.office}
                                   </span>
-                                  {/* <span className="upcoming-creator">
-                                    • {task.creator_name}
-                                  </span> */}
                                 </div>
                               </div>
                             </div>

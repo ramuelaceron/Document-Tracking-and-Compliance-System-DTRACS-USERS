@@ -212,7 +212,7 @@ const TaskForm = ({ onClose, onTaskCreated = () => {} }) => {
         setFormData(prev => ({ ...prev, assignedTo: validAssignedUsers }));
       }
     }
-  }, [formData.for]);
+  }, [formData.for, formData.assignedTo]);
 
   const handleSchoolSelection = (selectedSchools) => {
     setFormData(prev => ({ ...prev, for: selectedSchools }));

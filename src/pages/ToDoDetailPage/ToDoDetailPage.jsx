@@ -1,66 +1,44 @@
-// ToDoDetailPage.jsx
+// src/pages/ToDoDetailPage/ToDoDetailPage.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
-import "./ToDoDetailPage.css";
-import { FaFilePdf, FaFileWord, FaFileImage, FaFile } from "react-icons/fa";
+import { useNavigate, useLocation, useOutletContext } from "react-router-dom"; // ✅ Added useOutletContext
 import { IoChevronBackOutline } from "react-icons/io5";
 import { PiClipboardTextBold } from "react-icons/pi";
 import AttachedFiles from "../../components/AttachedFiles/AttachedFiles";
 import TaskActions from "../../components/TaskActions/TaskActions";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { taskData } from "../../data/taskData";
+import "./ToDoDetailPage.css";
+import config from "../../config";
 
 const ToDoDetailPage = () => {
   const navigate = useNavigate();
-  const { sectionId, taskSlug } = useParams();
-  const { state } = useLocation();
+  const location = useLocation();
+  const { refetchTasks } = useOutletContext(); // ✅ Get refetch function from parent
+  const { state } = location;
 
   // State
-  const [attachedFiles, setAttachedFiles] = useState([]);
   const [attachedLinks, setAttachedLinks] = useState([]);
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isLate, setIsLate] = useState(false);
+  const [revisionLinks, setRevisionLinks] = useState([]); // NEW: For revision tracking
 
-  // Get task data from navigation state or find it in taskData
+  // Extract task info from state
+  const taskId = state?.taskId;
   const taskTitle = state?.taskTitle;
   const taskDeadline = state?.deadline;
   const taskCreationDate = state?.creation_date;
   const taskDescription = state?.taskDescription;
-  const taskId = state?.taskId;
 
-  // 🔍 Find the task and focal entry using the task ID from state
-  const section = taskData[sectionId];
-  let focalEntry = null;
-  let task = null;
+  console.log("📍 Location state:", state);
 
-  if (section && Array.isArray(section) && taskId) {
-    for (const item of section) {
-      const match = item.tasklist?.find(t => t.task_id === taskId);
-      if (match) {
-        focalEntry = item;
-        task = match;
-        break;
-      }
-    }
-  }
+  // Get current user
+  const currentUser = JSON.parse(sessionStorage.getItem("currentUser"));
+  const schoolUserId = currentUser?.user_id;
 
-  // If task not found by ID, try to find it by title (fallback)
-  if (!task && taskTitle && section && Array.isArray(section)) {
-    for (const item of section) {
-      const match = item.tasklist?.find(t => t.title === taskTitle);
-      if (match) {
-        focalEntry = item;
-        task = match;
-        break;
-      }
-    }
-  }
-
-  // Extract task and focal data
-  const creator_name = task?.creator_name || state?.creator_name || "Unknown Creator";
-
-  // Format date functions
+  // Format date/time
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -71,7 +49,6 @@ const ToDoDetailPage = () => {
         day: 'numeric'
       });
     } catch (error) {
-      console.error('Error formatting date:', error);
       return "Invalid date";
     }
   };
@@ -86,261 +63,486 @@ const ToDoDetailPage = () => {
         hour12: true
       });
     } catch (error) {
-      console.error('Error formatting time:', error);
       return "Invalid time";
     }
   };
 
-  // Get status color based on task status
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Incomplete":
-        return "#D32F2F"; // Red for incomplete
-      case "Completed":
-        return "#333"; // Dark gray for completed
-      case "Ongoing":
-        return "#2196F3"; // Blue for ongoing
-      case "Late":
-        return "#FF9800"; // Orange for late
-      default:
-        return "#333";
+  // Status mapping
+  const getRemarksStatusInfo = (remarks, deadline, now) => {
+    if (remarks === 'TURNED IN ON TIME') {
+      return {
+        color: '#4CAF50',
+        text: 'Turned in on Time',
+        isCompleted: true,
+        isLate: false,
+        isPastDue: false,
+        isOverdue: false
+      };
     }
+
+    if (remarks === 'TURNED IN LATE') {
+      return {
+        color: '#FF9800',
+        text: 'Turned in Late',
+        isCompleted: true,
+        isLate: true,
+        isPastDue: false,
+        isOverdue: false
+      };
+    }
+
+    if (remarks === 'MISSING') {
+      return {
+        color: '#D32F2F',
+        text: 'Missing',
+        isCompleted: false,
+        isLate: false,
+        isPastDue: true,
+        isOverdue: true
+      };
+    }
+
+    const isDeadlinePassed = deadline && new Date(deadline) < now;
+    const isPending = remarks === 'PENDING';
+
+    if (isDeadlinePassed && isPending) {
+      return {
+        color: '#D32F2F',
+        text: 'Past Due',
+        isCompleted: false,
+        isLate: false,
+        isPastDue: true,
+        isOverdue: true
+      };
+    }
+
+    return {
+      color: '#2196F3',
+      text: 'Pending',
+      icon: null,
+      isCompleted: false,
+      isLate: false,
+      isPastDue: false,
+      isOverdue: false
+    };
   };
 
-  // Get status display text
-  const getStatusText = (status) => {
-    switch (status) {
-      case "Incomplete":
-        return "Past Due";
-      case "Completed":
-        return "Completed";
-      case "Ongoing":
-        return "Assigned";
-      case "Late":
-        return "Late Submission";
-      default:
-        return status || "Assigned";
-    }
-  };
-
-  // Sync completion status from data
+  // Auto-refresh logic
   useEffect(() => {
-    if (task?.task_status === "Completed") {
-      setIsCompleted(true);
-    } else if (task?.task_status === "Incomplete") {
-      setIsLate(false);
+    let intervalId;
+
+    if (task?.deadline) {
+      const checkDeadline = () => {
+        const now = new Date();
+        const deadline = new Date(task.deadline);
+        const isDeadlinePassed = deadline < now;
+        const isPending = task.assigned_response?.remarks === 'PENDING';
+
+        if (isDeadlinePassed && isPending) {
+          setTask(prev => ({
+            ...prev,
+            _autoOverdue: true
+          }));
+        }
+      };
+
+      checkDeadline();
+      intervalId = setInterval(checkDeadline, 30000);
+      return () => clearInterval(intervalId);
     }
-  }, [task?.task_status]);
+  }, [task?.deadline, task?.assigned_response?.remarks]);
+
+  // Fetch task details
+  useEffect(() => {
+    const fetchTaskDetails = async () => {
+      if (!taskId || !schoolUserId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const token = currentUser?.token;
+
+        const response = await fetch(
+          `${config.API_BASE_URL}/school/all/tasks?user_id=${encodeURIComponent(schoolUserId)}`,
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+        }
+
+        const allTasks = await response.json();
+        const foundTask = allTasks.find(t => t.task_id === taskId);
+
+        if (!foundTask) {
+          setError("Task not found.");
+          return;
+        }
+
+        setTask(foundTask);
+        setIsCompleted(foundTask.assigned_response?.remarks === 'TURNED IN ON TIME' || 
+                      foundTask.assigned_response?.remarks === 'TURNED IN LATE');
+
+      } catch (err) {
+        console.error("Error fetching task:", err);
+        setError(err.message || "Failed to load task details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTaskDetails();
+  }, [taskId, schoolUserId, currentUser?.token]);
 
   // Handlers
   const handleBack = () => navigate(-1);
 
-  const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length + attachedFiles.length > 6) {
-      toast.warn("You can only attach up to 6 files.");
-      return;
-    }
-
-    const newFiles = files.map((file) => ({
-      id: URL.createObjectURL(file),
-      file,
-      name: file.name,
-      type: getFileType(file),
-      icon: getFileIcon(file),
-    }));
-
-    setAttachedFiles((prev) => [...prev, ...newFiles]);
-  };
-
-  const handleRemoveFile = (fileId) => {
-    const fileToRemove = attachedFiles.find((f) => f.id === fileId);
-    if (fileToRemove) URL.revokeObjectURL(fileToRemove.id);
-    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
-  };
-
-  // Handle link changes as an array
   const handleLinksChange = (links) => {
     setAttachedLinks(links);
   };
 
-  // Handle removing individual links
   const handleRemoveLink = (index) => {
     setAttachedLinks(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleComplete = () => {
-    // Validate all links if any are provided
-    const invalidLinks = attachedLinks.filter(link => 
-      link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
+  // NEW: Handle adding revision links
+  const handleAddRevision = (newLink) => {
+    setRevisionLinks(prev => [...prev, { ...newLink, id: Date.now() }]);
+    toast.info("Revision link added!");
+  };
+
+// Submit task logic - UPDATED FOR RESUBMISSION AND TAB NAVIGATION
+const handleComplete = async () => {
+  const invalidLinks = attachedLinks.filter(link =>
+    link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
+  );
+
+  if (invalidLinks.length > 0) {
+    toast.error("Please enter valid URLs starting with http:// or https://");
+    return;
+  }
+
+  // ✅ CHECK IF THIS IS A RESUBMISSION (was previously completed)
+  const wasPreviouslyCompleted = task?.assigned_response?.remarks === 'TURNED IN ON TIME' || 
+                                task?.assigned_response?.remarks === 'TURNED IN LATE';
+
+  if (wasPreviouslyCompleted) {
+    const confirmed = window.confirm(
+      "You're about to resubmit this task. This will replace your previous submission. Continue?"
     );
-    
-    if (invalidLinks.length > 0) {
-      toast.error("Please enter valid URLs starting with http:// or https://");
-      return;
+    if (!confirmed) return;
+  }
+
+  const remarks = task?.assigned_response?.remarks;
+  if (remarks === 'MISSING') {
+    const confirmed = window.confirm(
+      "You marked this task as missing. Are you sure you want to submit it now?"
+    );
+    if (!confirmed) return;
+  }
+
+  if (attachedLinks.length === 0) {
+    const confirmed = window.confirm(
+      "You haven't added any links. Are you sure you want to submit this task?"
+    );
+    if (!confirmed) return;
+  }
+
+  const now = new Date();
+  const deadline = new Date(task.deadline);
+  const isOnTime = now <= deadline;
+  const submissionRemarks = isOnTime ? 'TURNED IN ON TIME' : 'TURNED IN LATE';
+
+  const submissionLink = attachedLinks.length > 0 ? attachedLinks[0].url : '';
+
+  const updatePayload = {
+    task_id: task.task_id,
+    school_id: schoolUserId,
+    status: 'COMPLETE',
+    remarks: submissionRemarks,
+    link: submissionLink,
+    revision_links: revisionLinks.map(link => link.url) // Include revision links
+  };
+
+  try {
+    setIsSubmitting(true);
+    const token = currentUser?.token;
+
+    const response = await fetch(
+      `${config.API_BASE_URL}/school/update/task/status`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update task status: ${response.status} ${errorText}`);
     }
-    
-    if (attachedFiles.length === 0 && attachedLinks.length === 0) {
-      const confirmed = window.confirm(
-        "You haven't attached any files or added any links. Are you sure you want to mark this task as completed?"
-      );
-      if (!confirmed) return;
+
+    // ✅ UPDATE LOCAL STATE
+    setTask(prevTask => ({
+      ...prevTask,
+      assigned_response: {
+        ...prevTask.assigned_response,
+        remarks: submissionRemarks
+      }
+    }));
+
+    // ✅ CLEAR REVISION LINKS ON RESUBMISSION
+    setRevisionLinks([]);
+    setIsCompleted(true);
+    setIsSubmitting(false);
+
+    const successMessage = wasPreviouslyCompleted ? "Task resubmitted successfully!" : "Task submitted successfully!";
+    toast.success(successMessage);
+
+    // ✅ ✅ ✅ KEY FIX: Refetch tasks so parent page updates its lists
+    if (refetchTasks) {
+      await refetchTasks();
     }
-    
-    // Check if task was originally incomplete (past due)
-    if (task?.task_status === "Incomplete") {
-      setIsLate(true);
+
+    // ✅ Navigate to Completed tab after 1.5 seconds to allow toast to show
+    setTimeout(() => {
+      navigate('/to-do/completed', { 
+        state: { 
+          scrollToTaskId: task.task_id,
+          submissionSuccess: true,
+          message: successMessage
+        } 
+      });
+    }, 1500);
+
+  } catch (err) {
+    console.error("Submission error:", err);
+    toast.error(err.message || "Failed to submit task. Please try again.");
+    setIsSubmitting(false);
+  }
+};
+
+  // ✅ UPDATED: Cancel submission function
+const handleIncomplete = async () => {
+  const remarks = task?.assigned_response?.remarks;
+  if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this submission? This will reset the task status and allow you to make changes."
+    );
+    if (!confirmed) return;
+
+    try {
+      const token = currentUser?.token;
+
+      const response = await fetch(`${config.API_BASE_URL}/school/update/task/status?status=INCOMPLETE`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          task_id: task.task_id,
+          school_id: schoolUserId,
+          status: 'INCOMPLETE',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to revert task status.");
+      }
+
+      // ✅ COMPLETELY RESET THE TASK STATE
+      setTask(prevTask => ({
+        ...prevTask,
+        assigned_response: {
+          ...prevTask.assigned_response,
+          remarks: 'PENDING' // Reset to pending
+        }
+      }));
+
+      // ✅ CLEAR ALL LINKS (both original and revision links)
+      setAttachedLinks([]);
+      setRevisionLinks([]);
       setIsCompleted(false);
-      toast.success("Task marked as late submission!");
-    } else {
-      setIsCompleted(true);
-      setIsLate(false);
-      toast.success("Task marked as completed!");
+      
+      toast.info("Submission cancelled. Task is now pending.");
+      
+      // ✅ Refetch tasks to update lists
+      if (refetchTasks) {
+        await refetchTasks();
+      }
+
+      // ✅ Navigate back to pending/active tab
+      setTimeout(() => {
+        navigate('/to-do/upcoming', { 
+          state: { 
+            scrollToTaskId: task.task_id,
+            cancellationSuccess: true
+          } 
+        });
+      }, 1500);
+
+    } catch (err) {
+      console.error("Revert error:", err);
+      toast.error("Failed to cancel submission. Please try again.");
     }
-    
-    // Log submission details
-    console.log("Submission includes:", {
-      files: attachedFiles.length,
-      links: attachedLinks
-    });
-  };
 
-  const handleIncomplete = () => {
-    setIsCompleted(false);
-    setIsLate(false);
-    toast.info("Task status reverted.");
-  };
+  } else {
+    toast.info("Task is already in a non-submitted state.");
+  }
+};
 
-  // Get current user once
-  const savedUser = sessionStorage.getItem("currentUser");
-  const currentUser = savedUser
-    ? JSON.parse(savedUser)
-    : { first_name: "Unknown", last_Name: "User", middle_name: "", email: "unknown@deped.gov.ph" };
+  // Calculate status info
+  const now = new Date();
+  const remarks = task?.assigned_response?.remarks || 'PENDING';
+  const statusInfo = getRemarksStatusInfo(remarks, task?.deadline, now);
+  const isDeadlinePassed = task?.deadline && new Date(task.deadline) < now;
 
-  const fullName = `${currentUser.first_name} ${currentUser.middle_name ? currentUser.middle_name + " " : ""}${currentUser.last_name}`.trim();
-
-  // File helpers
-  const getFileIcon = (file) => {
-    const ext = file?.name.split(".").pop()?.toLowerCase();
-    if (ext === "pdf") return <FaFilePdf />;
-    if (["doc", "docx"].includes(ext)) return <FaFileWord />;
-    if (["jpg", "jpeg", "png"].includes(ext)) return <FaFileImage />;
-    return <FaFile />;
-  };
-
-  const getFileType = (file) => {
-    const ext = file?.name.split(".").pop()?.toLowerCase();
-    if (ext === "pdf") return "PDF";
-    if ("doc docx".includes(ext)) return "DOC";
-    if (["jpg", "jpeg", "png"].includes(ext)) return "Image";
-    return ext?.toUpperCase() || "FILE";
-  };
-
-  // Handle task not found
-  if (!task) {
+  // Loading/Error states
+  if (loading) {
     return (
-      <div className="task-detail-app">
-        <main className="task-detail-main">
-          <button className="back-button" onClick={() => navigate(-1)}>
+      <div className="todo-detail-app">
+        <main className="todo-detail-main">
+          <button className="todo-back-btn" onClick={handleBack}>
             <IoChevronBackOutline className="icon-md" /> Back
           </button>
-          <div className="error-container">
-            <p>⚠️ Task not found.</p>
-            <small>Please go back and try again.</small>
+          <div className="loading-container">
+            <p>Loading details...</p>
           </div>
         </main>
+        <ToastContainer />
       </div>
     );
   }
 
-  const taskStatus = task.task_status || "Ongoing";
-  const statusColor = getStatusColor(isLate ? "Late" : isCompleted ? "Completed" : taskStatus);
-  const statusText = getStatusText(isLate ? "Late" : isCompleted ? "Completed" : taskStatus);
+  if (error) {
+    return (
+      <div className="todo-detail-app">
+        <main className="todo-detail-main">
+          <button className="todo-back-btn" onClick={handleBack}>
+            <IoChevronBackOutline className="icon-md" /> Back
+          </button>
+          <div className="error-container">
+            <p>⚠️ {error}</p>
+          </div>
+        </main>
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="todo-detail-app">
+        <main className="todo-detail-main">
+          <button className="todo-back-btn" onClick={handleBack}>
+            <IoChevronBackOutline className="icon-md" /> Back
+          </button>
+          <div className="error-container">
+            <p>⚠️ Task not found.</p>
+          </div>
+        </main>
+        <ToastContainer />
+      </div>
+    );
+  }
 
   return (
     <div className="todo-detail-app">
       <main className="todo-detail-main">
-        {/* Back Button */}
-        <button className="todo-back-btn" onClick={handleBack}>
+        <button 
+        className={`todo-back-btn`} 
+        onClick={handleBack}>
           <IoChevronBackOutline className="icon-md" /> Back
         </button>
 
-        {/* Header */}
         <div className="todo-header">
-          <div 
-            className="todo-icon" 
-            style={{ 
-              background: statusColor,
-              transition: "background 0.3s ease"
-            }}
-          >
-            <PiClipboardTextBold 
-              className="icon-lg" 
-              style={{ 
-                color: "white" 
-              }} 
-            />
+          <div className="todo-icon" style={{ background: statusInfo.color }}>
+            <PiClipboardTextBold className="icon-lg" style={{ color: "white" }} />
           </div>
           <h1 className="todo-title">{task.title || taskTitle}</h1>
           <div className="todo-status">
-            {isCompleted ? (
-              <span style={{ color: "#4CAF50", display: "flex", alignItems: "center", gap: "4px" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                </svg>
-                Completed
+            {statusInfo.isCompleted ? (
+              <span style={{ color: statusInfo.color, display: "flex", alignItems: "center", gap: "4px" }}>
+                {statusInfo.text}
               </span>
-            ) : isLate ? (
-              <span style={{ color: "#FF9800", display: "flex", alignItems: "center", gap: "4px", fontWeight: "bold" }}>
-                ⚠️ Late Submission
+            ) : statusInfo.isPastDue ? (
+              <span style={{ color: statusInfo.color, display: "flex", alignItems: "center", gap: "4px", fontWeight: "bold" }}>
+                {statusInfo.text}
               </span>
             ) : (
-              <span style={{ color: statusColor, display: "flex", alignItems: "center", gap: "4px", fontWeight: "bold" }}>
-                {taskStatus === "Incomplete" && "⚠️ "}
-                {statusText}
+              <span style={{ color: statusInfo.color, display: "flex", alignItems: "center", gap: "4px", fontWeight: "bold" }}>
+                {isDeadlinePassed && remarks === 'PENDING' && "⚠️ "}
+                {statusInfo.text}
               </span>
             )}
           </div>
         </div>
 
-        {/* Meta Info */}
         <div className="todo-meta">
           <div className="todo-category">{task.section}</div>
           <div className="todo-due">
             Due {formatDate(task.deadline || taskDeadline)} at {formatTime(task.deadline || taskDeadline)}
+            {isDeadlinePassed && remarks === 'PENDING' && (
+              <span style={{ color: '#D32F2F', marginLeft: '8px', fontWeight: 'bold', animation: 'pulse 1.5s infinite' }}>
+                (Overdue)
+              </span>
+            )}
           </div>
         </div>
 
         <div className="divider" />
 
-        {/* Author & Date */}
         <div className="todo-author">
-          {creator_name} • Posted on {formatDate(task.creation_date || taskCreationDate)}
+          {task.creator_name || "Unknown Creator"} • Posted on {formatDate(task.creation_date || taskCreationDate)}
         </div>
 
-        {/* Description */}
-        <div className="todo-description">{task.description || taskDescription}</div>
+        <div className="todo-description">
+          {task.description || taskDescription || "No description provided."}
+        </div>
 
-        {/* Actions */}
         <TaskActions
-          onFileChange={handleFileChange}
           onComplete={handleComplete}
           onIncomplete={handleIncomplete}
-          isCompleted={isCompleted || isLate}
-          isLate={isLate}
+          isCompleted={isCompleted}
           onLinksChange={handleLinksChange}
           links={attachedLinks}
+          isSubmitDisabled={isCompleted || isSubmitting}
+          isSubmitting={isSubmitting}
+          onAddRevision={handleAddRevision} // NEW: Pass revision handler
         />
 
-        {/* Attached Files & Links */}
-        {(attachedFiles.length > 0 || attachedLinks.length > 0) && (
-          <AttachedFiles 
-            files={attachedFiles} 
+        {/* Original Links */}
+        {attachedLinks.length > 0 && (
+          <AttachedFiles
             links={attachedLinks}
-            onRemoveFile={handleRemoveFile}
             onRemoveLink={handleRemoveLink}
-            isCompleted={isCompleted || isLate} 
+            isCompleted={isCompleted}
           />
+        )}
+
+        {/* Revision Links */}
+        {revisionLinks.length > 0 && (
+          <div className="revision-section">
+            <h3 className="revision-title">Revision Links</h3>
+            <AttachedFiles
+              links={revisionLinks}
+              onRemoveLink={(index) => {
+                setRevisionLinks(prev => prev.filter((_, i) => i !== index));
+              }}
+              isCompleted={isCompleted}
+            />
+          </div>
         )}
       </main>
 

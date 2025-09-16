@@ -5,18 +5,17 @@ import { FiCheckSquare } from "react-icons/fi";
 import { MdManageAccounts } from "react-icons/md";
 import { IoChevronDown } from "react-icons/io5";
 import { useSidebar } from "../../context/SidebarContext";
-import "./SchoolSidebar.css";
+import "./SchoolSidebar.css"; // ⚠️ Class names updated below too!
 
 const SchoolSidebar = ({ isExpanded }) => {
   const { toggleSidebar, openDropdown, toggleDropdown } = useSidebar();
-  const location = useLocation(); // 👈 Central location
+  const location = useLocation();
 
   const handleOfficesClick = () => {
     if (!isExpanded) toggleSidebar(true);
     toggleDropdown("offices");
   };
 
-  // ✅ Helper: Check if path matches
   const isActive = (path, exact = true) => {
     if (exact) {
       return location.pathname === path;
@@ -25,18 +24,18 @@ const SchoolSidebar = ({ isExpanded }) => {
   };
 
   return (
-    <aside className={`sidebar ${isExpanded ? "expanded" : ""}`}>
-      <nav className="sidebar-nav">
+    <aside className={`side-bar ${isExpanded ? "side-expanded" : ""}`}>
+      <nav className="side-nav">
         <ul>
           {/* Home */}
           <li>
             <NavLink
               to="/home"
-              className={`sidebar-link ${isActive("/home") ? "active" : ""}`}
+              className={`side-link ${isActive("/home") ? "side-active" : ""}`}
               end
             >
-              <FaHome className="sidebar-icon" />
-              {isExpanded && <span className="sidebar-text">Home</span>}
+              <FaHome className="side-icon" />
+              {isExpanded && <span className="side-text">Home</span>}
             </NavLink>
           </li>
 
@@ -44,38 +43,38 @@ const SchoolSidebar = ({ isExpanded }) => {
           <li>
             <NavLink
               to="/to-do/upcoming"
-              className={`sidebar-link ${isActive("/to-do/", false) ? "active" : ""}`}
+              className={`side-link ${isActive("/to-do/", false) ? "side-active" : ""}`}
             >
-              <FiCheckSquare className="sidebar-icon" />
-              {isExpanded && <span className="sidebar-text">To-do</span>}
+              <FiCheckSquare className="side-icon" />
+              {isExpanded && <span className="side-text">To-do</span>}
             </NavLink>
           </li>
 
           {/* Offices dropdown */}
           <li>
             <button
-              className="sidebar-link dropdown-toggle"
+              className="side-link side-dropdown-toggle"
               onClick={handleOfficesClick}
             >
-              <FaBriefcase className="sidebar-icon" />
+              <FaBriefcase className="side-icon" />
               {isExpanded && (
                 <>
-                  <span className="sidebar-text">Offices</span>
+                  <span className="side-text">Offices</span>
                   <IoChevronDown
-                    className={`dropdown-icon ${openDropdown === "offices" ? "open" : ""}`}
+                    className={`side-dropdown-icon ${openDropdown === "offices" ? "side-open" : ""}`}
                   />
                 </>
               )}
             </button>
 
             {isExpanded && openDropdown === "offices" && (
-              <ul className="sidebar-submenu">
+              <ul className="side-submenu">
                 <li>
                   <NavLink
                     to="/SGOD"
-                    className={`sidebar-link sub-link ${isActive("/SGOD") ? "active" : ""}`}
+                    className={`side-link side-sub-link ${isActive("/SGOD") ? "side-active" : ""}`}
                   >
-                    <span className="sidebar-text">SGOD (School Gover…)</span>
+                    <span className="side-text">SGOD (School Gover…)</span>
                   </NavLink>
                 </li>
               </ul>
@@ -86,10 +85,10 @@ const SchoolSidebar = ({ isExpanded }) => {
           <li>
             <NavLink
               to="/s-manage-account"
-              className={`sidebar-link ${isActive("/manage-account") ? "active" : ""}`}
+              className={`side-link ${isActive("/manage-account") ? "side-active" : ""}`}
             >
-              <MdManageAccounts className="sidebar-icon" />
-              {isExpanded && <span className="sidebar-text">Manage Account</span>}
+              <MdManageAccounts className="side-icon" />
+              {isExpanded && <span className="side-text">Manage Account</span>}
             </NavLink>
           </li>
         </ul>

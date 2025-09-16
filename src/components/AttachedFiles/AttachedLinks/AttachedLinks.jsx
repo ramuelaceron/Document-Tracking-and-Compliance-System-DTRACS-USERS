@@ -104,24 +104,6 @@ const AttachedLinks = ({ isOpen, onClose, onAddLink }) => {
                 </p>
               )}
             </div>
-
-            <div className="form-group">
-              <label htmlFor="link-title" className="form-label">
-                Link Title (Optional)
-              </label>
-              <input
-                id="link-title"
-                type="text"
-                name="title"
-                placeholder="e.g., Project Documentation, Reference Material"
-                value={linkData.title}
-                onChange={handleInputChange}
-                className="form-input"
-              />
-              <p className="form-help">
-                If left blank, the URL will be displayed
-              </p>
-            </div>
           </div>
 
           <div className="modal-footer">

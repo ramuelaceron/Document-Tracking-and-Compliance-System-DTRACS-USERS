@@ -1,4 +1,4 @@
-// src/pages/Todo/Completed/Completed.jsx
+// src/pages/Todo/Completed/ToDoCompleted.jsx
 import React, { useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { PiClipboardTextBold } from "react-icons/pi";
@@ -125,14 +125,13 @@ const ToDoCompleted = () => {
                           deadline: task.deadline,
                           creation_date: task.creation_date,
                           taskDescription: task.description,
-                          taskId: task.id,
+                          taskId: task.task_id,
                           creator_name: task.creator_name,
-                          section_designation: task.section_designation,
-                          full_name: task.creator_name,
-                          task_status: "Completed"
+                          section_designation: task.section_designation
+                          // ✅ Removed task_status — not needed
                         }}
                         className="completed-task-link"
-                        key={task.id}
+                        key={`${task.task_id}-${task.title}`}
                       >
                         <div className="completed-card">
                           <div className="completed-card-content">
