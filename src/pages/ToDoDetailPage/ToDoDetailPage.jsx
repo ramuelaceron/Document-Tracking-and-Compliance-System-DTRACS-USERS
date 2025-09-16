@@ -1,6 +1,6 @@
 // src/pages/ToDoDetailPage/ToDoDetailPage.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useOutletContext } from "react-router-dom"; // ✅ Added useOutletContext
+import { useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { PiClipboardTextBold } from "react-icons/pi";
 import AttachedFiles from "../../components/AttachedFiles/AttachedFiles";
@@ -13,7 +13,7 @@ import config from "../../config";
 const ToDoDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { refetchTasks } = useOutletContext(); // ✅ Get refetch function from parent
+  const { refetchTasks } = useOutletContext();
   const { state } = location;
 
   // State
@@ -23,7 +23,7 @@ const ToDoDetailPage = () => {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [revisionLinks, setRevisionLinks] = useState([]); // NEW: For revision tracking
+  const [revisionLinks, setRevisionLinks] = useState([]);
 
   // Extract task info from state
   const taskId = state?.taskId;
@@ -164,7 +164,8 @@ const ToDoDetailPage = () => {
         setLoading(true);
         const token = currentUser?.token;
 
-        const response = await fetch(
+        // ✅ Fetch task
+        const tasksResponse = await fetch(
           `${config.API_BASE_URL}/school/all/tasks?user_id=${encodeURIComponent(schoolUserId)}`,
           {
             headers: {
@@ -174,11 +175,11 @@ const ToDoDetailPage = () => {
           }
         );
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+        if (!tasksResponse.ok) {
+          throw new Error(`Failed to fetch tasks: ${tasksResponse.statusText}`);
         }
 
-        const allTasks = await response.json();
+        const allTasks = await tasksResponse.json();
         const foundTask = allTasks.find(t => t.task_id === taskId);
 
         if (!foundTask) {
@@ -186,9 +187,38 @@ const ToDoDetailPage = () => {
           return;
         }
 
-        setTask(foundTask);
-        setIsCompleted(foundTask.assigned_response?.remarks === 'TURNED IN ON TIME' || 
-                      foundTask.assigned_response?.remarks === 'TURNED IN LATE');
+        // ✅ Fetch assignments for this task
+        const assignmentsResponse = await fetch(
+          `${config.API_BASE_URL}/school/all/task/assignments?task_id=${encodeURIComponent(taskId)}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!assignmentsResponse.ok) {
+          throw new Error(`Failed to fetch assignments: ${assignmentsResponse.status} ${await assignmentsResponse.text()}`);
+        }
+
+        const assignments = await assignmentsResponse.json();
+
+        // ✅ Filter for current user
+        const currentUserAssignment = assignments.find(a => a.school_id === schoolUserId) || null;
+
+        const enrichedTask = {
+          ...foundTask,
+          assigned_response: currentUserAssignment,
+          all_assignments: assignments
+        };
+
+        setTask(enrichedTask);
+        setIsCompleted(
+          enrichedTask.assigned_response?.remarks === 'TURNED IN ON TIME' || 
+          enrichedTask.assigned_response?.remarks === 'TURNED IN LATE'
+        );
 
       } catch (err) {
         console.error("Error fetching task:", err);
@@ -212,195 +242,166 @@ const ToDoDetailPage = () => {
     setAttachedLinks(prev => prev.filter((_, i) => i !== index));
   };
 
-  // NEW: Handle adding revision links
   const handleAddRevision = (newLink) => {
     setRevisionLinks(prev => [...prev, { ...newLink, id: Date.now() }]);
     toast.info("Revision link added!");
   };
 
-// Submit task logic - UPDATED FOR RESUBMISSION AND TAB NAVIGATION
-const handleComplete = async () => {
-  const invalidLinks = attachedLinks.filter(link =>
-    link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
-  );
-
-  if (invalidLinks.length > 0) {
-    toast.error("Please enter valid URLs starting with http:// or https://");
-    return;
-  }
-
-  // ✅ CHECK IF THIS IS A RESUBMISSION (was previously completed)
-  const wasPreviouslyCompleted = task?.assigned_response?.remarks === 'TURNED IN ON TIME' || 
-                                task?.assigned_response?.remarks === 'TURNED IN LATE';
-
-  if (wasPreviouslyCompleted) {
-    const confirmed = window.confirm(
-      "You're about to resubmit this task. This will replace your previous submission. Continue?"
-    );
-    if (!confirmed) return;
-  }
-
-  const remarks = task?.assigned_response?.remarks;
-  if (remarks === 'MISSING') {
-    const confirmed = window.confirm(
-      "You marked this task as missing. Are you sure you want to submit it now?"
-    );
-    if (!confirmed) return;
-  }
-
-  if (attachedLinks.length === 0) {
-    const confirmed = window.confirm(
-      "You haven't added any links. Are you sure you want to submit this task?"
-    );
-    if (!confirmed) return;
-  }
-
-  const now = new Date();
-  const deadline = new Date(task.deadline);
-  const isOnTime = now <= deadline;
-  const submissionRemarks = isOnTime ? 'TURNED IN ON TIME' : 'TURNED IN LATE';
-
-  const submissionLink = attachedLinks.length > 0 ? attachedLinks[0].url : '';
-
-  const updatePayload = {
-    task_id: task.task_id,
-    school_id: schoolUserId,
-    status: 'COMPLETE',
-    remarks: submissionRemarks,
-    link: submissionLink,
-    revision_links: revisionLinks.map(link => link.url) // Include revision links
-  };
-
-  try {
-    setIsSubmitting(true);
-    const token = currentUser?.token;
-
-    const response = await fetch(
-      `${config.API_BASE_URL}/school/update/task/status`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatePayload),
-      }
+  // Submit task logic
+  const handleComplete = async () => {
+    const invalidLinks = attachedLinks.filter(link =>
+      link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to update task status: ${response.status} ${errorText}`);
+    if (invalidLinks.length > 0) {
+      toast.error("Please enter valid URLs starting with http:// or https://");
+      return;
     }
 
-    // ✅ UPDATE LOCAL STATE
-    setTask(prevTask => ({
-      ...prevTask,
-      assigned_response: {
-        ...prevTask.assigned_response,
-        remarks: submissionRemarks
-      }
-    }));
+    const wasPreviouslyCompleted = task?.assigned_response?.remarks === 'TURNED IN ON TIME' || 
+                                  task?.assigned_response?.remarks === 'TURNED IN LATE';
 
-    // ✅ CLEAR REVISION LINKS ON RESUBMISSION
-    setRevisionLinks([]);
-    setIsCompleted(true);
-    setIsSubmitting(false);
-
-    const successMessage = wasPreviouslyCompleted ? "Task resubmitted successfully!" : "Task submitted successfully!";
-    toast.success(successMessage);
-
-    // ✅ ✅ ✅ KEY FIX: Refetch tasks so parent page updates its lists
-    if (refetchTasks) {
-      await refetchTasks();
+    if (wasPreviouslyCompleted) {
+      const confirmed = window.confirm(
+        "You're about to resubmit this task. This will replace your previous submission. Continue?"
+      );
+      if (!confirmed) return;
     }
 
-    // ✅ Navigate to Completed tab after 1.5 seconds to allow toast to show
-    setTimeout(() => {
-      navigate('/to-do/completed', { 
-        state: { 
-          scrollToTaskId: task.task_id,
-          submissionSuccess: true,
-          message: successMessage
-        } 
-      });
-    }, 1500);
+    const remarks = task?.assigned_response?.remarks;
+    if (remarks === 'MISSING') {
+      const confirmed = window.confirm(
+        "You marked this task as missing. Are you sure you want to submit it now?"
+      );
+      if (!confirmed) return;
+    }
 
-  } catch (err) {
-    console.error("Submission error:", err);
-    toast.error(err.message || "Failed to submit task. Please try again.");
-    setIsSubmitting(false);
-  }
-};
+    if (attachedLinks.length === 0) {
+      const confirmed = window.confirm(
+        "You haven't added any links. Are you sure you want to submit this task?"
+      );
+      if (!confirmed) return;
+    }
 
-  // ✅ UPDATED: Cancel submission function
-const handleIncomplete = async () => {
-  const remarks = task?.assigned_response?.remarks;
-  if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this submission? This will reset the task status and allow you to make changes."
-    );
-    if (!confirmed) return;
+    const now = new Date();
+    const deadline = new Date(task.deadline);
+    const isOnTime = now <= deadline;
+    const submissionRemarks = isOnTime ? 'TURNED IN ON TIME' : 'TURNED IN LATE';
+    const submissionLink = attachedLinks.length > 0 ? attachedLinks[0].url : '';
+
+    const updatePayload = {
+      task_id: task.task_id,
+      school_id: schoolUserId,
+      status: 'COMPLETE',
+      remarks: submissionRemarks,
+      link: submissionLink,
+      revision_links: revisionLinks.map(link => link.url)
+    };
 
     try {
+      setIsSubmitting(true);
       const token = currentUser?.token;
 
-      const response = await fetch(`${config.API_BASE_URL}/school/update/task/status?status=INCOMPLETE`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          task_id: task.task_id,
-          school_id: schoolUserId,
-          status: 'INCOMPLETE',
-        }),
-      });
+      const response = await fetch(
+        `${config.API_BASE_URL}/school/update/task/status`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to revert task status.");
+        const errorText = await response.text();
+        throw new Error(`Failed to update task status: ${response.status} ${errorText}`);
       }
 
-      // ✅ COMPLETELY RESET THE TASK STATE
+      // ✅ UPDATE LOCAL STATE
       setTask(prevTask => ({
         ...prevTask,
         assigned_response: {
           ...prevTask.assigned_response,
-          remarks: 'PENDING' // Reset to pending
+          remarks: submissionRemarks
         }
       }));
 
-      // ✅ CLEAR ALL LINKS (both original and revision links)
-      setAttachedLinks([]);
       setRevisionLinks([]);
-      setIsCompleted(false);
-      
-      toast.info("Submission cancelled. Task is now pending.");
-      
-      // ✅ Refetch tasks to update lists
+      setIsCompleted(true);
+      setIsSubmitting(false);
+
+      const successMessage = wasPreviouslyCompleted ? "Task resubmitted successfully!" : "Task submitted successfully!";
+      toast.success(successMessage);
+
       if (refetchTasks) {
         await refetchTasks();
       }
 
-      // ✅ Navigate back to pending/active tab
-      setTimeout(() => {
-        navigate('/to-do/upcoming', { 
-          state: { 
-            scrollToTaskId: task.task_id,
-            cancellationSuccess: true
-          } 
-        });
-      }, 1500);
-
     } catch (err) {
-      console.error("Revert error:", err);
-      toast.error("Failed to cancel submission. Please try again.");
+      console.error("Submission error:", err);
+      toast.error(err.message || "Failed to submit task. Please try again.");
+      setIsSubmitting(false);
     }
+  };
 
-  } else {
-    toast.info("Task is already in a non-submitted state.");
-  }
-};
+  // Cancel submission function
+  const handleIncomplete = async () => {
+    const remarks = task?.assigned_response?.remarks;
+    if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this submission? This will reset the task status and allow you to make changes."
+      );
+      if (!confirmed) return;
+
+      try {
+        const token = currentUser?.token;
+
+        const response = await fetch(`${config.API_BASE_URL}/school/update/task/status?status=INCOMPLETE`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            task_id: task.task_id,
+            school_id: schoolUserId,
+            status: 'INCOMPLETE',
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to revert task status.");
+        }
+
+        setTask(prevTask => ({
+          ...prevTask,
+          assigned_response: {
+            ...prevTask.assigned_response,
+            remarks: 'PENDING'
+          }
+        }));
+
+        setAttachedLinks([]);
+        setRevisionLinks([]);
+        setIsCompleted(false);
+        
+        toast.info("Submission cancelled. Task is now pending.");
+        
+        if (refetchTasks) {
+          await refetchTasks();
+        }
+
+      } catch (err) {
+        console.error("Revert error:", err);
+        toast.error("Failed to cancel submission. Please try again.");
+      }
+
+    } else {
+      toast.info("Task is already in a non-submitted state.");
+    }
+  };
 
   // Calculate status info
   const now = new Date();
@@ -519,7 +520,7 @@ const handleIncomplete = async () => {
           links={attachedLinks}
           isSubmitDisabled={isCompleted || isSubmitting}
           isSubmitting={isSubmitting}
-          onAddRevision={handleAddRevision} // NEW: Pass revision handler
+          onAddRevision={handleAddRevision}
         />
 
         {/* Original Links */}

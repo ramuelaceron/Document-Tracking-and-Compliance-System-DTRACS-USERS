@@ -1,8 +1,9 @@
 // src/pages/Todo/ToDoPage/ToDoPage.jsx
-import { useMemo, useState, useEffect, useCallback } from "react"; // ✅ Added useCallback
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import ToDoTabs from "../../../components/ToDoTabs/ToDoTabs";
 import { createSlug } from "../../../utils/idGenerator";
+import { mergeTasksWithAssignments } from "../../../utils/taskUtils";
 import config from "../../../config";
 import "./ToDoPage.css";
 
@@ -32,7 +33,8 @@ const ToDoPage = () => {
     try {
       const token = currentUser?.token;
 
-      const response = await fetch(
+      // ✅ Step 1: Fetch tasks for current user
+      const tasksResponse = await fetch(
         `${config.API_BASE_URL}/school/all/tasks?user_id=${encodeURIComponent(schoolUserId)}`,
         {
           headers: {
@@ -42,15 +44,49 @@ const ToDoPage = () => {
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch tasks: ${response.status} - ${errorText}`);
+      if (!tasksResponse.ok) {
+        throw new Error(`Failed to fetch tasks: ${tasksResponse.statusText}`);
       }
 
-      const rawData = await response.json();
-      console.log("📡 Raw tasks from backend:", rawData);
+      const tasks = await tasksResponse.json();
 
-      const groupedBySection = rawData.reduce((acc, task) => {
+      // ✅ Step 2: For each task, fetch its assignments
+      const assignmentPromises = tasks.map(async (task) => {
+        const assignmentResponse = await fetch(
+          `${config.API_BASE_URL}/school/all/task/assignments?task_id=${encodeURIComponent(task.task_id)}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!assignmentResponse.ok) {
+          console.warn(`Failed to fetch assignments for task ${task.task_id}: ${assignmentResponse.status}`);
+          return { task_id: task.task_id, assignments: [] };
+        }
+
+        const assignments = await assignmentResponse.json();
+        return { task_id: task.task_id, assignments };
+      });
+
+      const assignmentResults = await Promise.all(assignmentPromises);
+
+      // ✅ Step 3: Flatten all assignments into one array
+      const allAssignments = assignmentResults.flatMap(result => 
+        result.assignments.map(assignment => ({
+          ...assignment,
+          task_id: result.task_id // Ensure task_id is attached
+        }))
+      );
+
+      // ✅ Step 4: Merge tasks with assignments for current user
+      const enrichedTasks = mergeTasksWithAssignments(tasks, allAssignments, schoolUserId);
+
+      // ✅ Group by section
+      const groupedBySection = enrichedTasks.reduce((acc, task) => {
         const sectionName = task.section || "General";
         if (!acc[sectionName]) {
           acc[sectionName] = [
@@ -67,16 +103,16 @@ const ToDoPage = () => {
 
       setTasks(groupedBySection);
     } catch (err) {
-      console.error("Error fetching tasks:", err);
+      console.error("Error fetching tasks or assignments:", err);
       setError(err.message || "Failed to load tasks. Please try again.");
     }
-  }, [isSchoolUser, schoolUserId, currentUser?.token]); // ✅ Dependencies for useCallback
+  }, [isSchoolUser, schoolUserId, currentUser?.token]);
 
   useEffect(() => {
     fetchTasks();
     const intervalId = setInterval(fetchTasks, 30_000);
     return () => clearInterval(intervalId);
-  }, [fetchTasks]); // ✅ Now depends only on stable fetchTasks
+  }, [fetchTasks]);
 
   const allOffices = useMemo(() => {
     return [
@@ -88,84 +124,82 @@ const ToDoPage = () => {
     ].sort();
   }, [tasks]);
 
-const { upcomingTasks, pastDueTasks, completedTasks } = useMemo(() => {
-  const upcoming = [];
-  const pastDue = [];
-  const completed = [];
-  const now = new Date();
+  const { upcomingTasks, pastDueTasks, completedTasks } = useMemo(() => {
+    const upcoming = [];
+    const pastDue = [];
+    const completed = [];
+    const now = new Date();
 
-  if (!tasks || typeof tasks !== 'object') {
-    return { upcomingTasks: [], pastDueTasks: [], completedTasks: [] };
-  }
+    if (!tasks || typeof tasks !== 'object') {
+      return { upcomingTasks: [], pastDueTasks: [], completedTasks: [] };
+    }
 
-  Object.entries(tasks).forEach(([sectionName, sections]) => {
-    if (!Array.isArray(sections)) return;
+    Object.entries(tasks).forEach(([sectionName, sections]) => {
+      if (!Array.isArray(sections)) return;
 
-    sections.forEach((section) => {
-      if (!section.tasklist || !Array.isArray(section.tasklist)) return;
+      sections.forEach((section) => {
+        if (!section.tasklist || !Array.isArray(section.tasklist)) return;
 
-      section.tasklist.forEach((task) => {
-        if (!task) return;
+        section.tasklist.forEach((task) => {
+          if (!task) return;
 
-        const taskDeadline = task.deadline ? new Date(task.deadline) : null;
-        // ✅ USE REMARKS FIELD FROM ASSIGNED_RESPONSE
-        const remarks = task.assigned_response?.remarks || 'PENDING';
+          const taskDeadline = task.deadline ? new Date(task.deadline) : null;
+          const remarks = task.assigned_response?.remarks || 'PENDING';
 
-        let uiStatus = "Upcoming";
-        let category = "upcoming";
+          let uiStatus = "Upcoming";
+          let category = "upcoming";
 
-        // ✅ Categorize based on remarks
-        if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
-          uiStatus = "Completed";
-          category = "completed";
-        } else if (remarks === 'MISSING') {
-          uiStatus = "Past Due";
-          category = "pastDue";
-        } else if (remarks === 'PENDING') {
-          if (taskDeadline && taskDeadline < now) {
+          if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
+            uiStatus = "Completed";
+            category = "completed";
+          } else if (remarks === 'MISSING') {
             uiStatus = "Past Due";
             category = "pastDue";
-          } else {
-            uiStatus = "Upcoming";
-            category = "upcoming";
+          } else if (remarks === 'PENDING') {
+            if (taskDeadline && taskDeadline < now) {
+              uiStatus = "Past Due";
+              category = "pastDue";
+            } else {
+              uiStatus = "Upcoming";
+              category = "upcoming";
+            }
           }
-        }
 
-        const taskDataObj = {
-          id: task.creator_id,
-          task_id: task.task_id,
-          title: task.title || "Untitled Task",
-          deadline: task.deadline,
-          office: task.office || "Unknown Office",
-          creation_date: task.creation_date,
-          completion_date: task.completion_date,
-          sectionId: sectionName,
-          sectionName: sectionName,
-          taskSlug: createSlug(task.title || "untitled-task"),
-          creator_name: task.creator_name || "Unknown Creator",
-          description: task.description || "",
-          task_status: uiStatus,
-          section_designation: sectionName,
-          originalTask: task,
-          assignment_status: remarks, // ✅ Keep raw remarks value
-        };
+          const taskDataObj = {
+            id: task.creator_id,
+            task_id: task.task_id,
+            title: task.title || "Untitled Task",
+            deadline: task.deadline,
+            office: task.office || "Unknown Office",
+            creation_date: task.creation_date,
+            completion_date: task.completion_date,
+            sectionId: sectionName,
+            sectionName: sectionName,
+            taskSlug: createSlug(task.title || "untitled-task"),
+            creator_name: task.creator_name || "Unknown Creator",
+            description: task.description || "",
+            task_status: uiStatus,
+            section_designation: sectionName,
+            originalTask: task,
+            assignment_status: remarks,
+          };
 
-        if (category === "completed") {
-          completed.push({
-            ...taskDataObj,
-            completedTime: task.completion_date || task.modified_date || task.creation_date,
-          });
-        } else if (category === "pastDue") {
-          pastDue.push(taskDataObj);
-        } else {
-          upcoming.push(taskDataObj);
-        }
+          if (category === "completed") {
+            completed.push({
+              ...taskDataObj,
+              completedTime: task.completion_date || task.modified_date || task.creation_date,
+            });
+          } else if (category === "pastDue") {
+            pastDue.push(taskDataObj);
+          } else {
+            upcoming.push(taskDataObj);
+          }
+        });
       });
     });
-  });
 
-  return { upcomingTasks: upcoming, pastDueTasks: pastDue, completedTasks: completed };
-}, [tasks]);
+    return { upcomingTasks: upcoming, pastDueTasks: pastDue, completedTasks: completed };
+  }, [tasks]);
 
   if (isOfficeWithoutSection) {
     return (
@@ -245,7 +279,7 @@ const { upcomingTasks, pastDueTasks, completedTasks } = useMemo(() => {
           selectedSort,
           allOffices,
           activeTab,
-          refetchTasks: fetchTasks, // ✅ Stable function, safe to pass
+          refetchTasks: fetchTasks,
         }}
       />
     </div>

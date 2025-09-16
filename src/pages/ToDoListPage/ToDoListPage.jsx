@@ -1,13 +1,12 @@
 // src/pages/ToDoListPage/ToDoListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createSlug } from '../../utils/idGenerator';
 import { generateAvatar } from '../../utils/iconGenerator';
 import './ToDoListPage.css';
 import config from '../../config';
 
 const ToDoListPage = () => {
-  const { sectionId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
