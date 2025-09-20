@@ -135,9 +135,12 @@ const ToDoCompleted = () => {
                         <div className="completed-card">
                           <div className="completed-card-content">
                             <div className="completed-card-text">
-                              <div className={`completed-task-icon status-${task.assignment_status === 'TURNED IN ON TIME' ? 'on-time' : 
+                              {/* ✅ Clipboard icon with dynamic background color - CIRCULAR */}
+                              <div 
+                                className={`completed-task-icon status-${task.assignment_status === 'TURNED IN ON TIME' ? 'on-time' : 
                                          task.assignment_status === 'TURNED IN LATE' ? 'late' : 
-                                         task.assignment_status === 'MISSING' ? 'missing' : 'pending'}`}>
+                                         task.assignment_status === 'MISSING' ? 'missing' : 'pending'}`}
+                              >
                                 <PiClipboardTextBold className="icon-lg" />
                               </div>
                               <div>
@@ -154,7 +157,8 @@ const ToDoCompleted = () => {
 
                             <div className="completed-card-completion">
                               <span className="completion-text">
-                                ✔ Completed on {formatDate(task.completedTime)} at <span className="time">{formatTime(task.completedTime)}</span>
+                                ✔ Completed on {formatDate(task.completedTime)} at{" "}
+                                <span className="time">{formatTime(task.completedTime)}</span>
                               </span>
                             </div>
                           </div>
