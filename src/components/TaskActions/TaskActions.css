@@ -1,157 +1,139 @@
-/* TaskActions.css */
+/* src/components/TaskActions/TaskActions.css */
 
 /* Main container */
 .task-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 20px;
   flex-wrap: wrap;
   position: relative;
 }
 
-/* NEW: Container for buttons to keep them together */
+/* Buttons Container */
 .task-actions-buttons-container {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-/* === ADD LINK BUTTON (same size as Complete button) === */
+/* === ADD LINK BUTTON === */
 .task-actions-link-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 18px;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 4px;
-  background-color: #ffffff;
-  color: #007bff;
-  border: 1px solid #007bff;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #3b82f6;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.task-actions-link-btn:hover {
-  background-color: #f0f7ff;
-  border-color: #0056b3;
+.task-actions-link-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .task-actions-link-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* === PLAIN TEXT (when task is submitted) === */
-.task-actions-attachment-plain {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #777;
-  padding: 8px 0;
-}
-
-/* === COMPLETED STATE (text) === */
-.task-actions-status-completed {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #28a745;
-  padding: 8px 16px;
-  border-radius: 4px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  transform: none;
+  box-shadow: none;
 }
 
 /* === COMPLETE BUTTON === */
 .task-actions-complete-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 18px;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 4px;
-  background-color: #007bff;
+  border-radius: 8px;
+  background: #3b82f6;
   color: white;
-  border: 1px solid #007bff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .task-actions-complete-btn:hover:not(:disabled) {
-  background-color: #0056b3;
-  border-color: #0056b3;
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
 .task-actions-complete-btn:disabled {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
-  color: #666666 !important;
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
   cursor: not-allowed !important;
   opacity: 0.7;
+  transform: none;
+  box-shadow: none;
 }
 
-/* === CANCEL BUTTON === */
+/* === CANCEL BUTTON — SUBTLE & LESS NOTICEABLE === */
 .task-actions-cancel-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  border-radius: 4px;
-  background-color: #dc3545;
-  color: white;
-  border: 1px solid #dc3545;
-  transition: all 0.3s ease;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-/* NEW: Highlighted Cancel button when task is completed */
-.is-completed .task-actions-cancel-btn {
-  position: relative;
-  z-index: 1001; /* Above the overlay */
-  transform: translateY(-2px);
-  animation: pulse-cancel 2s infinite;
+.task-actions-cancel-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
 }
 
-.task-actions-cancel-btn:hover {
-  background-color: #c82333;
-  border-color: #c82333;
-  transform: translateY(-2px);
+.task-actions-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Icons */
 .task-actions-icon {
-  width: 14px;
-  height: 14px;
-  opacity: 0.8;
+  width: 16px;
+  height: 16px;
+  opacity: 0.9;
 }
 
-/* Specific override for completed state icon */
-.task-actions-status-completed .task-actions-icon,
-.task-actions-attachment-plain .task-actions-icon {
-  opacity: 0.7;
-}
-
-/* Ensure proper spacing between elements */
-.task-actions > * {
-  margin: 0;
-}
-
-/* Responsive adjustments */
+/* Responsive Design */
 @media (max-width: 768px) {
   .task-actions {
-    gap: 10px;
+    gap: 12px;
+    margin: 16px 0;
   }
-  
+
   .task-actions-link-btn,
   .task-actions-complete-btn,
-  .task-actions-cancel-btn,
-  .task-actions-status-completed {
-    padding: 8px 12px;
+  .task-actions-cancel-btn {
+    padding: 8px 14px;
     font-size: 13px;
   }
 }
@@ -160,33 +142,40 @@
   .task-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
-  
-  .task-actions-link-btn,
-  .task-actions-complete-btn,
-  .task-actions-cancel-btn,
-  .task-actions-status-completed {
-    width: 100%;
-    justify-content: center;
-  }
-  
+
   .task-actions-buttons-container {
     width: 100%;
     justify-content: center;
+    gap: 12px;
+  }
+
+  .task-actions-link-btn,
+  .task-actions-complete-btn,
+  .task-actions-cancel-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
-.is-completed .task-actions-cancel-btn {
-  position: relative;
-  z-index: 1001; /* Above the overlay (which has z-index: 100) */
+/* Extra Polish */
+.task-actions-link-btn svg,
+.task-actions-complete-btn svg,
+.task-actions-cancel-btn svg {
+  transition: transform 0.2s ease;
 }
 
-/* Remove the animation and transform effects from the existing code */
-.is-completed .task-actions-cancel-btn {
-  animation: none;
-  transform: none;
+.task-actions-link-btn:hover svg,
+.task-actions-complete-btn:hover svg,
+.task-actions-cancel-btn:hover svg {
+  transform: scale(1.1);
 }
 
-.is-completed .task-actions-cancel-btn:hover {
-  transform: none; /* Remove the hover transform too */
+/* Focus states for accessibility */
+.task-actions-link-btn:focus,
+.task-actions-complete-btn:focus,
+.task-actions-cancel-btn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }

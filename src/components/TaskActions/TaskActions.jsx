@@ -32,16 +32,18 @@ const TaskActions = ({
 
   return (
     <div className={`task-actions ${isCompleted ? 'is-completed' : ''}`}>
-      {/* ✅ ALWAYS show "Add Link" button — disabled if completed */}
-      <button
-        type="button"
-        className="task-actions-link-btn"
-        onClick={handleLinkClick}
-        disabled={isCompleted}
-      >
-        <IoMdLink className="task-actions-icon" />
-        Add Link
-      </button>
+      {/* ✅ Show "Add Link" button only when task is NOT completed */}
+      {!isCompleted && (
+        <button
+          type="button"
+          className="task-actions-link-btn"
+          onClick={handleLinkClick}
+          disabled={isCompleted}
+        >
+          <IoMdLink className="task-actions-icon" />
+          Add Link
+        </button>
+      )}
 
       {/* Link Modal */}
       <AttachedLinks
@@ -50,16 +52,13 @@ const TaskActions = ({
         onAddLink={handleAddLink}
       />
 
-      {/* Complete / Cancel Buttons - STAY IN PLACE */}
+      {/* Complete / Cancel Buttons */}
       <div className="task-actions-buttons-container">
         {isCompleted ? (
           <>
-            <div className="task-actions-status-completed">
-              <MdOutlineDoneOutline className="task-actions-icon" />
-              Completed
-            </div>
+            {/* ✅ Show "Cancel" button when task is completed */}
             <SharedButton
-              variant="danger"
+              variant="secondary"
               size="medium"
               onClick={onIncomplete}
               className="task-actions-cancel-btn"
@@ -69,16 +68,19 @@ const TaskActions = ({
             </SharedButton>
           </>
         ) : (
-          <SharedButton
-            variant="primary"
-            size="medium"
-            onClick={onComplete}
-            className="task-actions-complete-btn"
-            disabled={isSubmitDisabled || isSubmitting}
-          >
-            <MdOutlineDoneOutline className="task-actions-icon" />
-            {isSubmitting ? 'Submitting...' : 'Complete'}
-          </SharedButton>
+          <>
+            {/* ✅ Show "Complete" button when task is pending */}
+            <SharedButton
+              variant="primary"
+              size="medium"
+              onClick={onComplete}
+              className="task-actions-complete-btn"
+              disabled={isSubmitDisabled || isSubmitting}
+            >
+              <MdOutlineDoneOutline className="task-actions-icon" />
+              {isSubmitting ? 'Submitting...' : 'Complete'}
+            </SharedButton>
+          </>
         )}
       </div>
     </div>
