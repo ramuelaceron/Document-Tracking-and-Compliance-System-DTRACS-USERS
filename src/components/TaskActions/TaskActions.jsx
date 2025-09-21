@@ -32,16 +32,28 @@ const TaskActions = ({
 
   return (
     <div className={`task-actions ${isCompleted ? 'is-completed' : ''}`}>
-      {/* ✅ ALWAYS show "Add Link" button — disabled if completed */}
-      <button
-        type="button"
-        className="task-actions-link-btn"
-        onClick={handleLinkClick}
-        disabled={isCompleted}
-      >
-        <IoMdLink className="task-actions-icon" />
-        Add Link
-      </button>
+      {/* ✅ Conditionally render Add Link OR Cancel button */}
+      {!isCompleted ? (
+        <button
+          type="button"
+          className="task-actions-link-btn"
+          onClick={handleLinkClick}
+          disabled={isCompleted}
+        >
+          <IoMdLink className="task-actions-icon" />
+          Add Link
+        </button>
+      ) : (
+        <SharedButton
+          variant="secondary"
+          size="medium"
+          onClick={onIncomplete}
+          className="task-actions-cancel-btn"
+        >
+          <MdCancel className="task-actions-icon" />
+          Cancel
+        </SharedButton>
+      )}
 
       {/* Link Modal */}
       <AttachedLinks
@@ -50,24 +62,13 @@ const TaskActions = ({
         onAddLink={handleAddLink}
       />
 
-      {/* Complete / Cancel Buttons - STAY IN PLACE */}
+      {/* Complete / Status Buttons */}
       <div className="task-actions-buttons-container">
         {isCompleted ? (
-          <>
-            <div className="task-actions-status-completed">
-              <MdOutlineDoneOutline className="task-actions-icon" />
-              Completed
-            </div>
-            <SharedButton
-              variant="danger"
-              size="medium"
-              onClick={onIncomplete}
-              className="task-actions-cancel-btn"
-            >
-              <MdCancel className="task-actions-icon" />
-              Cancel
-            </SharedButton>
-          </>
+          <div className="task-actions-status-completed">
+            <MdOutlineDoneOutline className="task-actions-icon" />
+            Completed
+          </div>
         ) : (
           <SharedButton
             variant="primary"

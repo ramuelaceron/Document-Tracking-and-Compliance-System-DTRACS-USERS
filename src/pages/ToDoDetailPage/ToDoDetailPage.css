@@ -96,6 +96,51 @@
   gap: 4px;
 }
 
+/* === Status Badge Styles === */
+.todo-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px; /* ✅ Slightly larger */
+  font-weight: 600;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.status-completed-on-time {
+  color: #4CAF50;
+}
+
+.status-completed-late {
+  color: #FF9800;
+}
+
+.status-past-due {
+  color: #D32F2F;
+  animation: pulse 2s infinite;
+}
+
+.status-pending {
+  color: #2196F3;
+}
+
+.status-warning-icon {
+  animation: pulse 1.5s infinite;
+}
+
+.status-overdue-label {
+  color: #D32F2F;
+  font-weight: bold;
+  margin-left: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
 /* Greyed out complete button */
 .complete-btn:disabled {
   background-color: #cccccc !important;

@@ -187,7 +187,8 @@ const ToDoPage = () => {
           if (category === "completed") {
             completed.push({
               ...taskDataObj,
-              completedTime: task.completion_date || task.modified_date || task.creation_date,
+              // ✅ FIXED: Use assigned_response.status_updated_at
+              completedTime: task.assigned_response?.status_updated_at || task.creation_date,
             });
           } else if (category === "pastDue") {
             pastDue.push(taskDataObj);

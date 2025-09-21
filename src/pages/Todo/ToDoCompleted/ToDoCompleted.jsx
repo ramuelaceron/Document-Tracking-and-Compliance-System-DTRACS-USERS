@@ -55,7 +55,7 @@ const ToDoCompleted = () => {
   // ✅ Get pre-filtered completed tasks from ToDoPage layout
   const { completedTasks } = useOutletContext();
 
-  // Group tasks by formatted completion date (using completedTime)
+  // Group tasks by formatted completion date
   const groupedByDate = completedTasks.reduce((groups, task) => {
     const formattedDate = formatDate(task.completedTime || task.creation_date);
     if (!groups[formattedDate]) groups[formattedDate] = [];
@@ -128,7 +128,6 @@ const ToDoCompleted = () => {
                           taskId: task.task_id,
                           creator_name: task.creator_name,
                           section_designation: task.section_designation
-                          // ✅ Removed task_status — not needed
                         }}
                         className="completed-task-link"
                         key={`${task.task_id}-${task.title}`}
@@ -136,7 +135,9 @@ const ToDoCompleted = () => {
                         <div className="completed-card">
                           <div className="completed-card-content">
                             <div className="completed-card-text">
-                              <div className="completed-task-icon">
+                              <div className={`completed-task-icon status-${task.assignment_status === 'TURNED IN ON TIME' ? 'on-time' : 
+                                         task.assignment_status === 'TURNED IN LATE' ? 'late' : 
+                                         task.assignment_status === 'MISSING' ? 'missing' : 'pending'}`}>
                                 <PiClipboardTextBold className="icon-lg" />
                               </div>
                               <div>
@@ -153,8 +154,7 @@ const ToDoCompleted = () => {
 
                             <div className="completed-card-completion">
                               <span className="completion-text">
-                                ✔ Completed on {formatDate(task.completedTime || task.creation_date)} at{" "}
-                                <span className="time">{formatTime(task.completedTime || task.creation_date)}</span>
+                                ✔ Completed on {formatDate(task.completedTime)} at <span className="time">{formatTime(task.completedTime)}</span>
                               </span>
                             </div>
                           </div>

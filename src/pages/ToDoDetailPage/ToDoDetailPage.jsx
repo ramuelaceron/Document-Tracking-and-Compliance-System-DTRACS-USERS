@@ -8,7 +8,10 @@ import TaskActions from "../../components/TaskActions/TaskActions";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./ToDoDetailPage.css";
-import config from "../../config";
+import TaskConfirmations from "../../components/TaskConfirmations/TaskConfirmations";
+import { formatDate, formatTime } from "../../utils/dateUtils";
+import { getRemarksStatusInfo } from "../../utils/taskStatusUtils";
+import { fetchTaskDetails, updateTaskStatus, revertTaskStatus } from "../../api/taskApi";
 
 const ToDoDetailPage = () => {
   const navigate = useNavigate();
@@ -25,6 +28,12 @@ const ToDoDetailPage = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [revisionLinks, setRevisionLinks] = useState([]);
 
+  // ✅ Confirmation dialog states
+  const [showResubmitConfirm, setShowResubmitConfirm] = useState(false);
+  const [showMissingConfirm, setShowMissingConfirm] = useState(false);
+  const [showEmptyLinksConfirm, setShowEmptyLinksConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
   // Extract task info from state
   const taskId = state?.taskId;
   const taskTitle = state?.taskTitle;
@@ -37,95 +46,7 @@ const ToDoDetailPage = () => {
   // Get current user
   const currentUser = JSON.parse(sessionStorage.getItem("currentUser"));
   const schoolUserId = currentUser?.user_id;
-
-  // Format date/time
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      return "Invalid date";
-    }
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-    } catch (error) {
-      return "Invalid time";
-    }
-  };
-
-  // Status mapping
-  const getRemarksStatusInfo = (remarks, deadline, now) => {
-    if (remarks === 'TURNED IN ON TIME') {
-      return {
-        color: '#4CAF50',
-        text: 'Turned in on Time',
-        isCompleted: true,
-        isLate: false,
-        isPastDue: false,
-        isOverdue: false
-      };
-    }
-
-    if (remarks === 'TURNED IN LATE') {
-      return {
-        color: '#FF9800',
-        text: 'Turned in Late',
-        isCompleted: true,
-        isLate: true,
-        isPastDue: false,
-        isOverdue: false
-      };
-    }
-
-    if (remarks === 'MISSING') {
-      return {
-        color: '#D32F2F',
-        text: 'Missing',
-        isCompleted: false,
-        isLate: false,
-        isPastDue: true,
-        isOverdue: true
-      };
-    }
-
-    const isDeadlinePassed = deadline && new Date(deadline) < now;
-    const isPending = remarks === 'PENDING';
-
-    if (isDeadlinePassed && isPending) {
-      return {
-        color: '#D32F2F',
-        text: 'Past Due',
-        isCompleted: false,
-        isLate: false,
-        isPastDue: true,
-        isOverdue: true
-      };
-    }
-
-    return {
-      color: '#2196F3',
-      text: 'Pending',
-      icon: null,
-      isCompleted: false,
-      isLate: false,
-      isPastDue: false,
-      isOverdue: false
-    };
-  };
+  const token = currentUser?.token;
 
   // Auto-refresh logic
   useEffect(() => {
@@ -154,7 +75,7 @@ const ToDoDetailPage = () => {
 
   // Fetch task details
   useEffect(() => {
-    const fetchTaskDetails = async () => {
+    const loadTask = async () => {
       if (!taskId || !schoolUserId) {
         setLoading(false);
         return;
@@ -162,64 +83,12 @@ const ToDoDetailPage = () => {
 
       try {
         setLoading(true);
-        const token = currentUser?.token;
-
-        // ✅ Fetch task
-        const tasksResponse = await fetch(
-          `${config.API_BASE_URL}/school/all/tasks?user_id=${encodeURIComponent(schoolUserId)}`,
-          {
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!tasksResponse.ok) {
-          throw new Error(`Failed to fetch tasks: ${tasksResponse.statusText}`);
-        }
-
-        const allTasks = await tasksResponse.json();
-        const foundTask = allTasks.find(t => t.task_id === taskId);
-
-        if (!foundTask) {
-          setError("Task not found.");
-          return;
-        }
-
-        // ✅ Fetch assignments for this task
-        const assignmentsResponse = await fetch(
-          `${config.API_BASE_URL}/school/all/task/assignments?task_id=${encodeURIComponent(taskId)}`,
-          {
-            method: 'GET',
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!assignmentsResponse.ok) {
-          throw new Error(`Failed to fetch assignments: ${assignmentsResponse.status} ${await assignmentsResponse.text()}`);
-        }
-
-        const assignments = await assignmentsResponse.json();
-
-        // ✅ Filter for current user
-        const currentUserAssignment = assignments.find(a => a.school_id === schoolUserId) || null;
-
-        const enrichedTask = {
-          ...foundTask,
-          assigned_response: currentUserAssignment,
-          all_assignments: assignments
-        };
-
+        const enrichedTask = await fetchTaskDetails(taskId, schoolUserId, token);
         setTask(enrichedTask);
         setIsCompleted(
           enrichedTask.assigned_response?.remarks === 'TURNED IN ON TIME' || 
           enrichedTask.assigned_response?.remarks === 'TURNED IN LATE'
         );
-
       } catch (err) {
         console.error("Error fetching task:", err);
         setError(err.message || "Failed to load task details.");
@@ -228,8 +97,8 @@ const ToDoDetailPage = () => {
       }
     };
 
-    fetchTaskDetails();
-  }, [taskId, schoolUserId, currentUser?.token]);
+    loadTask();
+  }, [taskId, schoolUserId, token]);
 
   // Handlers
   const handleBack = () => navigate(-1);
@@ -247,7 +116,7 @@ const ToDoDetailPage = () => {
     toast.info("Revision link added!");
   };
 
-  // Submit task logic
+  // ✅ Submit task logic
   const handleComplete = async () => {
     const invalidLinks = attachedLinks.filter(link =>
       link && link.url && !/^(https?:\/\/)/i.test(link.url.trim())
@@ -262,145 +131,148 @@ const ToDoDetailPage = () => {
                                   task?.assigned_response?.remarks === 'TURNED IN LATE';
 
     if (wasPreviouslyCompleted) {
-      const confirmed = window.confirm(
-        "You're about to resubmit this task. This will replace your previous submission. Continue?"
-      );
-      if (!confirmed) return;
+      setShowResubmitConfirm(true);
+      return;
     }
 
     const remarks = task?.assigned_response?.remarks;
     if (remarks === 'MISSING') {
-      const confirmed = window.confirm(
-        "You marked this task as missing. Are you sure you want to submit it now?"
-      );
-      if (!confirmed) return;
+      setShowMissingConfirm(true);
+      return;
     }
 
     if (attachedLinks.length === 0) {
-      const confirmed = window.confirm(
-        "You haven't added any links. Are you sure you want to submit this task?"
-      );
-      if (!confirmed) return;
+      setShowEmptyLinksConfirm(true);
+      return;
     }
 
-    const now = new Date();
-    const deadline = new Date(task.deadline);
-    const isOnTime = now <= deadline;
-    const submissionRemarks = isOnTime ? 'TURNED IN ON TIME' : 'TURNED IN LATE';
-    const submissionLink = attachedLinks.length > 0 ? attachedLinks[0].url : '';
+    proceedWithSubmission(wasPreviouslyCompleted);
+  };
 
-    const updatePayload = {
-      task_id: task.task_id,
-      school_id: schoolUserId,
-      status: 'COMPLETE',
-      remarks: submissionRemarks,
-      link: submissionLink,
-      revision_links: revisionLinks.map(link => link.url)
-    };
+const proceedWithSubmission = async (wasPreviouslyCompleted) => {
+  const now = new Date();
+  const deadline = new Date(task.deadline);
+  const isOnTime = now <= deadline;
+  const submissionRemarks = isOnTime ? 'TURNED IN ON TIME' : 'TURNED IN LATE';
+  const submissionLink = attachedLinks.length > 0 ? attachedLinks[0].url : '';
 
-    try {
-      setIsSubmitting(true);
-      const token = currentUser?.token;
+  const updatePayload = {
+    task_id: task.task_id,
+    school_id: schoolUserId,
+    status: 'COMPLETE',
+    remarks: submissionRemarks,
+    link: submissionLink,
+    revision_links: revisionLinks.map(link => link.url)
+  };
 
-      const response = await fetch(
-        `${config.API_BASE_URL}/school/update/task/status`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatePayload),
-        }
-      );
+  try {
+    setIsSubmitting(true);
+    
+    await updateTaskStatus(updatePayload, token);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update task status: ${response.status} ${errorText}`);
+    // ✅ Update local task state with current time for immediate feedback
+    setTask(prevTask => ({
+      ...prevTask,
+      assigned_response: {
+        ...prevTask.assigned_response,
+        remarks: submissionRemarks,
+        status_updated_at: new Date().toISOString()
       }
+    }));
 
-      // ✅ UPDATE LOCAL STATE
+    setRevisionLinks([]);
+    setIsCompleted(true);
+    setIsSubmitting(false);
+
+    const successMessage = wasPreviouslyCompleted ? "Task resubmitted successfully!" : "Task submitted successfully!";
+    toast.success(successMessage);
+
+    // ✅ Re-fetch tasks to get latest data from backend
+    if (refetchTasks) {
+      await refetchTasks(); // ✅ This updates the task list with new status_updated_at
+    }
+
+  } catch (err) {
+    console.error("Submission error:", err);
+    toast.error(err.message || "Failed to submit task. Please try again.");
+    setIsSubmitting(false);
+  }
+};
+
+  // ✅ Cancel submission
+  const handleIncomplete = async () => {
+    const remarks = task?.assigned_response?.remarks;
+    if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
+      setShowCancelConfirm(true);
+      return;
+    } else {
+      toast.info("Task is already in a non-submitted state.");
+    }
+  };
+
+  const proceedWithCancellation = async () => {
+    try {
+      await revertTaskStatus(task.task_id, schoolUserId, token);
+
       setTask(prevTask => ({
         ...prevTask,
         assigned_response: {
           ...prevTask.assigned_response,
-          remarks: submissionRemarks
+          remarks: 'PENDING'
         }
       }));
 
+      setAttachedLinks([]);
       setRevisionLinks([]);
-      setIsCompleted(true);
-      setIsSubmitting(false);
-
-      const successMessage = wasPreviouslyCompleted ? "Task resubmitted successfully!" : "Task submitted successfully!";
-      toast.success(successMessage);
-
+      setIsCompleted(false);
+      
+      toast.info("Submission cancelled. Task is now pending.");
+      
       if (refetchTasks) {
         await refetchTasks();
       }
 
     } catch (err) {
-      console.error("Submission error:", err);
-      toast.error(err.message || "Failed to submit task. Please try again.");
-      setIsSubmitting(false);
+      console.error("Revert error:", err);
+      toast.error("Failed to cancel submission. Please try again.");
     }
   };
 
-  // Cancel submission function
-  const handleIncomplete = async () => {
-    const remarks = task?.assigned_response?.remarks;
-    if (remarks === 'TURNED IN ON TIME' || remarks === 'TURNED IN LATE') {
-      const confirmed = window.confirm(
-        "Are you sure you want to cancel this submission? This will reset the task status and allow you to make changes."
-      );
-      if (!confirmed) return;
+  // ✅ Confirmation handlers
+  const handleResubmitConfirm = () => {
+    setShowResubmitConfirm(false);
+    proceedWithSubmission(true);
+  };
 
-      try {
-        const token = currentUser?.token;
+  const handleResubmitCancel = () => {
+    setShowResubmitConfirm(false);
+  };
 
-        const response = await fetch(`${config.API_BASE_URL}/school/update/task/status?status=INCOMPLETE`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            task_id: task.task_id,
-            school_id: schoolUserId,
-            status: 'INCOMPLETE',
-          }),
-        });
+  const handleMissingConfirm = () => {
+    setShowMissingConfirm(false);
+    proceedWithSubmission(false);
+  };
 
-        if (!response.ok) {
-          throw new Error("Failed to revert task status.");
-        }
+  const handleMissingCancel = () => {
+    setShowMissingConfirm(false);
+  };
 
-        setTask(prevTask => ({
-          ...prevTask,
-          assigned_response: {
-            ...prevTask.assigned_response,
-            remarks: 'PENDING'
-          }
-        }));
+  const handleEmptyLinksConfirm = () => {
+    setShowEmptyLinksConfirm(false);
+    proceedWithSubmission(false);
+  };
 
-        setAttachedLinks([]);
-        setRevisionLinks([]);
-        setIsCompleted(false);
-        
-        toast.info("Submission cancelled. Task is now pending.");
-        
-        if (refetchTasks) {
-          await refetchTasks();
-        }
+  const handleEmptyLinksCancel = () => {
+    setShowEmptyLinksConfirm(false);
+  };
 
-      } catch (err) {
-        console.error("Revert error:", err);
-        toast.error("Failed to cancel submission. Please try again.");
-      }
+  const handleCancelConfirm = () => {
+    setShowCancelConfirm(false);
+    proceedWithCancellation();
+  };
 
-    } else {
-      toast.info("Task is already in a non-submitted state.");
-    }
+  const handleCancelCancel = () => {
+    setShowCancelConfirm(false);
   };
 
   // Calculate status info
@@ -545,6 +417,22 @@ const ToDoDetailPage = () => {
             />
           </div>
         )}
+
+        {/* ✅ Confirmation Dialogs - Extracted Component */}
+        <TaskConfirmations
+          showResubmitConfirm={showResubmitConfirm}
+          showMissingConfirm={showMissingConfirm}
+          showEmptyLinksConfirm={showEmptyLinksConfirm}
+          showCancelConfirm={showCancelConfirm}
+          onResubmitConfirm={handleResubmitConfirm}
+          onResubmitCancel={handleResubmitCancel}
+          onMissingConfirm={handleMissingConfirm}
+          onMissingCancel={handleMissingCancel}
+          onEmptyLinksConfirm={handleEmptyLinksConfirm}
+          onEmptyLinksCancel={handleEmptyLinksCancel}
+          onCancelConfirm={handleCancelConfirm}
+          onCancelCancel={handleCancelCancel}
+        />
       </main>
 
       <ToastContainer
